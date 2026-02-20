@@ -1,0 +1,29 @@
+{
+  "name": "web-crawler",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "seed": "bun run src/seed.ts",
+    "lint": "biome check src",
+    "format": "biome format --write src"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.3",
+    "@types/bloomfilter": "^0.0.2",
+    "@types/bull": "^4.10.4",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "bloomfilter": "^1.0.0",
+    "bull": "^4.16.5",
+    "cheerio": "^1.2.0",
+    "mongodb": "^7.1.0"
+  }
+}
