@@ -9,14 +9,22 @@
 		"seed": "bun run src/seed.ts",
 		"monitor": "bun run src/monitor.ts",
 		"lint": "biome check src",
-		"format": "biome format --write src"
+		"format": "biome format --write src",
+		"server": "bun run server/index.ts",
+		"dashboard": "bun run --cwd dashboard dev",
+		"dashboard:build": "bun run --cwd dashboard build"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.3",
 		"@types/bloomfilter": "^0.0.2",
 		"@types/bull": "^4.10.4",
 		"@types/bun": "latest",
-		"@types/ioredis": "^5.0.0"
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.6",
+		"@types/ioredis": "^5.0.0",
+		"@types/react": "^19.2.14",
+		"@types/react-router-dom": "^5.3.3",
+		"@types/recharts": "^1.8.29"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
@@ -27,8 +35,13 @@
 		"bull": "^4.16.5",
 		"cacheable-lookup": "^7.0.0",
 		"cheerio": "^1.2.0",
+		"cors": "^2.8.6",
+		"express": "^5.2.1",
 		"ioredis": "^5.9.3",
 		"mongodb": "^7.1.0",
+		"react": "^19.2.4",
+		"recharts": "^3.7.0",
+		"rect": "^1.2.1",
 		"robots-parser": "^3.0.1"
 	}
 }
