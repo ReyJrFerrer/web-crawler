@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ErrorLogEntry } from "../types";
 
-const MOCK: ErrorLogEntry[] = [];
-
 export function useErrorLogs(intervalMs = 3000) {
-	const [data, setData] = useState<ErrorLogEntry[]>(MOCK);
+	const [data, setData] = useState<ErrorLogEntry[]>([]);
 	const [isOffline, setIsOffline] = useState(false);
 	const [loading, setLoading] = useState(true);
 
@@ -16,7 +14,7 @@ export function useErrorLogs(intervalMs = 3000) {
 			setData(json);
 			setIsOffline(false);
 		} catch {
-			setData(MOCK);
+			setData([]);
 			setIsOffline(true);
 		} finally {
 			setLoading(false);

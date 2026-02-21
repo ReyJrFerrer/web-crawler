@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DataRecord } from "../types";
 
-const MOCK: DataRecord[] = [];
-
 export function useDataExplorer(intervalMs = 3000) {
-	const [data, setData] = useState<DataRecord[]>(MOCK);
+	const [data, setData] = useState<DataRecord[]>([]);
 	const [isOffline, setIsOffline] = useState(false);
 	const [loading, setLoading] = useState(true);
 
@@ -16,7 +14,7 @@ export function useDataExplorer(intervalMs = 3000) {
 			setData(json);
 			setIsOffline(false);
 		} catch {
-			setData(MOCK);
+			setData([]);
 			setIsOffline(true);
 		} finally {
 			setLoading(false);

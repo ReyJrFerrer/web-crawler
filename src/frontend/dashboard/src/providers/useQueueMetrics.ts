@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { QueueMetrics } from "../types";
 
-const MOCK: QueueMetrics = {
-	status: "connected",
+const INITIAL_STATE: QueueMetrics = {
+	status: "offline",
+	isPaused: false,
 	counts: {
 		waiting: 0,
 		active: 0,
@@ -15,7 +16,7 @@ const MOCK: QueueMetrics = {
 };
 
 export function useQueueMetrics(intervalMs = 3000) {
-	const [data, setData] = useState<QueueMetrics>(MOCK);
+	const [data, setData] = useState<QueueMetrics>(INITIAL_STATE);
 	const [isOffline, setIsOffline] = useState(false);
 	const [loading, setLoading] = useState(true);
 
@@ -27,7 +28,7 @@ export function useQueueMetrics(intervalMs = 3000) {
 			setData(json);
 			setIsOffline(json.status === "offline");
 		} catch {
-			setData(MOCK);
+			setData(INITIAL_STATE);
 			setIsOffline(true);
 		} finally {
 			setLoading(false);
