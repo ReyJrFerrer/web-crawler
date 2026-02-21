@@ -1,36 +1,39 @@
 {
-    "name": "web-crawler",
-    "module": "index.ts",
-    "type": "module",
-    "private": true,
-    "scripts": {
-        "start": "bun run src/index.ts",
-        "test": "bun test",
-        "seed": "bun run src/seed.ts",
-        "monitor": "bun run src/monitor.ts",
-        "lint": "biome check src",
-        "format": "biome format --write src"
-    },
-    "devDependencies": {
-        "@biomejs/biome": "^2.4.3",
-        "@types/bloomfilter": "^0.0.2",
-        "@types/bull": "^4.10.4",
-        "@types/bun": "latest",
-        "@types/ioredis": "^5.0.0"
-    },
-    "peerDependencies": {
-        "typescript": "^5"
-    },
-    "dependencies": {
-        "@types/puppeteer": "^7.0.4",
-        "axios": "^1.13.5",
-        "bloomfilter": "^1.0.0",
-        "bull": "^4.16.5",
-        "cacheable-lookup": "^7.0.0",
-        "cheerio": "^1.2.0",
-        "ioredis": "^5.9.3",
-        "mongodb": "^7.1.0",
-        "puppeteer": "^24.37.5",
-        "robots-parser": "^3.0.1"
-    }
+	"name": "web-crawler",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"start": "bun run src/index.ts",
+		"server": "bun run server/index.ts",
+		"dashboard": "bun run --cwd dashboard dev",
+		"dashboard:build": "bun run --cwd dashboard build",
+		"test": "bun test",
+		"seed": "bun run src/seed.ts",
+		"monitor": "bun run src/monitor.ts",
+		"lint": "biome check src",
+		"format": "biome format --write src"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.3",
+		"@types/bloomfilter": "^0.0.2",
+		"@types/bull": "^4.10.4",
+		"@types/bun": "latest",
+		"@types/ioredis": "^5.0.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@types/puppeteer": "^7.0.4",
+		"axios": "^1.13.5",
+		"bloomfilter": "^1.0.0",
+		"bull": "^4.16.5",
+		"cacheable-lookup": "^7.0.0",
+		"cheerio": "^1.2.0",
+		"ioredis": "^5.9.3",
+		"mongodb": "^7.1.0",
+		"puppeteer": "^24.37.5",
+		"robots-parser": "^3.0.1"
+	}
 }

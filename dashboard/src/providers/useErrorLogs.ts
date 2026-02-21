@@ -20,7 +20,7 @@ const MOCK: ErrorLogEntry[] = [
 ];
 
 export function useErrorLogs(intervalMs = 3000) {
-	const [data, setData] = useState<ErrorLogEntry[]>(MOCK);
+	const [data, setData] = useState<ErrorLogEntry[]>([]);
 	const [isOffline, setIsOffline] = useState(false);
 	const [loading, setLoading] = useState(true);
 
@@ -29,9 +29,11 @@ export function useErrorLogs(intervalMs = 3000) {
 			const res = await fetch("/api/data/errors");
 			if (!res.ok) throw new Error("non-2xx");
 			const json = (await res.json()) as ErrorLogEntry[];
+			// Empty array is valid (no errors) - don't treat it as offline
 			setData(json);
 			setIsOffline(false);
 		} catch {
+			// Only fall back to mock if we genuinely can't reach the BFF
 			setData(MOCK);
 			setIsOffline(true);
 		} finally {
