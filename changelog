@@ -24,6 +24,12 @@ Developer: Reynaldo
     - Updated `tests/parser.test.ts` to verify domain restriction and spider trap handling.
 
     
+- Distributed URL Frontier Enhancements:
+    - Updated `Frontier` to implement domain-based hash routing, hashing the domain to assign jobs to specific partitions.
+    - Updated `FetcherAgent` to configure itself based on designated partition IDs (`WORKER_PARTITION_IDS`) or fall back to listening to all partitions.
+    - Added `QUEUE_PARTITIONS` and `WORKER_PARTITION_IDS` configuration variables to `config.ts`.
+    - Added hash routing validation tests in `tests/frontier.test.ts`.
+
 Bugs Found 
 - Too Deep Fetching
     - Description: 
