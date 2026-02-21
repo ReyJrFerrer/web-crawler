@@ -56,6 +56,12 @@ Bugs Found
     Implemented Domain Restriction Filter in ParserAgent to prevent the crawler from escaping the original target domain.
     Refined Domain Restriction Filter to allow 1-hop embedded links (like youtube or tiktok) from the seed domain but restrict further out-of-bounds crawling by passing originalDomain through the Frontier Queue.
     
+- Pause and Stop Queue and Clear Redis Queue Endpoints are not working
+    - Description: 
+    The logs show in the backend layer but it does not appear to affect the services 
+
+
+    
 Developer: Jan Dale 
 
 Feb 20, 2026 
