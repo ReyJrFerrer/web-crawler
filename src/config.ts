@@ -11,4 +11,6 @@ export const config = {
 	useRenderer:
 		process.env.USE_RENDERER === "true" || process.env.USE_RENDERER === "1",
 	simhashThreshold: parseInt(process.env.SIMHASH_THRESHOLD || "3", 10),
+	queuePartitions: parseInt(process.env.QUEUE_PARTITIONS || "10", 10),
+	workerPartitionIds: process.env.WORKER_PARTITION_IDS || "",
 };

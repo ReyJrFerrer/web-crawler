@@ -14,6 +14,15 @@ export class Frontier {
 		this.queue = new Queue(queueName, config.redisUrl);
 	}
 
+	private hashDomain(domain: string): number {
+		let hash = 0;
+		for (let i = 0; i < domain.length; i++) {
+			hash = (hash << 5) - hash + domain.charCodeAt(i);
+			hash |= 0; // Convert to 32bit integer
+		}
+		return Math.abs(hash);
+	}
+
 	async addUrl(url: string, depth = 0, originalDomain?: string) {
 		if (depth > config.maxDepth) {
 			console.log(
@@ -21,8 +30,22 @@ export class Frontier {
 			);
 			return null;
 		}
+
+		let domain = originalDomain;
+		if (!domain) {
+			try {
+				domain = new URL(url).hostname;
+			} catch (_e) {
+				domain = "unknown";
+			}
+		}
+
+		const partitionId = this.hashDomain(domain) % config.queuePartitions;
+		const jobName = `partition-${partitionId}`;
+
 		return this.queue.add(
-			{ url, depth, originalDomain },
+			jobName,
+			{ url, depth, originalDomain: domain },
 			{
 				attempts: 3, // Retry up to 3 times
 				backoff: {

@@ -160,17 +160,32 @@ export class FetcherAgent {
 
 	startListening() {
 		const queue = this.frontier.getQueue();
-		queue.process(config.fetcherConcurrency, async (job) => {
-			const { url, depth, originalDomain } = job.data;
-			const success = await this.fetchAndProcess(url, depth, originalDomain);
-			if (!success) {
-				throw new Error(`Failed to process ${url}`);
+
+		let partitionsToProcess: number[] = [];
+		if (config.workerPartitionIds) {
+			partitionsToProcess = config.workerPartitionIds
+				.split(",")
+				.map((id) => parseInt(id.trim(), 10));
+		} else {
+			for (let i = 0; i < config.queuePartitions; i++) {
+				partitionsToProcess.push(i);
 			}
-			return success;
-		});
+		}
+
+		for (const partitionId of partitionsToProcess) {
+			const jobName = `partition-${partitionId}`;
+			queue.process(jobName, config.fetcherConcurrency, async (job) => {
+				const { url, depth, originalDomain } = job.data;
+				const success = await this.fetchAndProcess(url, depth, originalDomain);
+				if (!success) {
+					throw new Error(`Failed to process ${url}`);
+				}
+				return success;
+			});
+		}
 
 		console.log(
-			`[Fetcher] Agent started listening with concurrency ${config.fetcherConcurrency}`,
+			`[Fetcher] Agent started listening to partitions [${partitionsToProcess.join(",")}] with concurrency ${config.fetcherConcurrency}`,
 		);
 	}
 }
