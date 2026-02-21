@@ -36,6 +36,9 @@ Developer: Reynaldo
     - Added `express` and `cors` to the root project dependencies for the BFF API.
     - Fixed incorrect `config` import paths in `control.ts`, `dataExplorer.ts`, `queueMetrics.ts`, and `errorLogs.ts` inside the `src/frontend/server/` directory.
     - Updated `src/index.ts` to expose the backend-for-frontend on port 4000 alongside the crawler's orchestrator layer.
+    - Resolved Vite to BFF proxy `ECONNREFUSED` issues by migrating bindings from `localhost` to `127.0.0.1`.
+    - Stripped out all dummy `MOCK` payloads and variables from the Express data providers (`queueMetrics`, `dataExplorer`, `workerHealth`, `errorLogs`) guaranteeing real-time system state mirroring instead of mock fallbacks.
+
 
 Bugs Found 
 - Too Deep Fetching
