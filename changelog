@@ -38,6 +38,10 @@ Developer: Reynaldo
     - Updated `src/index.ts` to expose the backend-for-frontend on port 4000 alongside the crawler's orchestrator layer.
     - Resolved Vite to BFF proxy `ECONNREFUSED` issues by migrating bindings from `localhost` to `127.0.0.1`.
     - Stripped out all dummy `MOCK` payloads and variables from the Express data providers (`queueMetrics`, `dataExplorer`, `workerHealth`, `errorLogs`) guaranteeing real-time system state mirroring instead of mock fallbacks.
+    - Added a `QueueJobs` frontend component to the dashboard's `GlobalStatus` view to show live BullMQ jobs in a tabular format.
+    - Wired up the Kill Switch (Pause, Stop) UI components in `GlobalStatus.tsx` to directly interact with the backend queue control endpoints.
+    - Updated `GlobalStatus.tsx` to handle layout fixes and state management for queue commands.
+    - Implemented and hooked up `ioredis` flush command functionality via a Confirm Modal in the UI.
 
 
 Bugs Found 
