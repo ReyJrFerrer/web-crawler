@@ -1,7 +1,11 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import Queue from "bull";
 import { Router } from "express";
 import { config } from "../../src/config";
 import { Frontier } from "../../src/services/frontier";
+
+const execFileAsync = promisify(execFile);
 
 const router = Router();
 
@@ -83,21 +87,47 @@ router.post("/resume", async (_req, res) => {
 	}
 });
 
-// POST /api/queue/flush  { target: "redis" | "mongo" }  (dev-only)
+// POST /api/queue/flush  { target: "redis" }  (dev-only)
+// Runs `docker exec <container> redis-cli flushall` to wipe all Redis data,
+// then falls back to Bull's queue.empty() if Docker is unavailable.
 router.post("/flush", async (req, res) => {
 	const body = req.body as { target?: string };
 	const target = body.target;
 
+	if (target !== "redis") {
+		res.status(400).json({ success: false, message: "Unknown flush target" });
+		return;
+	}
+
+	// Container name: override via REDIS_CONTAINER env var, otherwise derive
+	// from the docker-compose default (project folder = "web-crawler", service = "redis").
+	const container = process.env.REDIS_CONTAINER ?? "web-crawler-redis-1";
+
 	try {
-		if (target === "redis") {
+		const { stdout } = await execFileAsync("docker", [
+			"exec",
+			container,
+			"redis-cli",
+			"flushall",
+		]);
+		console.log(`[control] redis flushall via docker: ${stdout.trim()}`);
+		res.json({ success: true, message: "Redis flushed (docker flushall)" });
+	} catch (dockerErr) {
+		// Docker unavailable or container not running — fall back to Bull queue.empty()
+		console.warn(
+			"[control] docker exec failed, falling back to queue.empty():",
+			(dockerErr as Error).message,
+		);
+		try {
 			await getPauseQueue().empty();
-			res.json({ success: true, message: "Redis queue emptied" });
-		} else {
-			res.status(400).json({ success: false, message: "Unknown flush target" });
+			res.json({
+				success: true,
+				message: "Redis queue emptied (Bull fallback — docker unavailable)",
+			});
+		} catch (bullErr) {
+			console.error("[control] flush fallback error:", bullErr);
+			res.status(503).json({ success: false, message: "Flush failed" });
 		}
-	} catch (err) {
-		console.error("[control] flush error:", err);
-		res.status(503).json({ success: false, message: "Flush failed" });
 	}
 });
 

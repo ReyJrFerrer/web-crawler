@@ -15,6 +15,7 @@
         "mongodb": "^7.1.0",
         "puppeteer": "^24.37.5",
         "robots-parser": "^3.0.1",
+        "simhash-js": "^1.0.0",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.4.3",
@@ -336,6 +337,8 @@
     "safer-buffer": ["safer-buffer@2.1.2", "", {}, ""],
 
     "semver": ["semver@7.7.4", "", { "bin": "bin/semver.js" }, ""],
+
+    "simhash-js": ["simhash-js@1.0.0", "", {}, "sha512-0amkwlDBXWWidaAXVpiZVF6xYNS8qG3mBbGcLRcyaAPsFDcsoaMxocBc08hrxI0dDDnd4IbfRkTJpTxks79/tg=="],
 
     "smart-buffer": ["smart-buffer@4.2.0", "", {}, "sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg=="],
 

@@ -4,17 +4,14 @@ import type { QueueMetrics } from "../types";
 const MOCK: QueueMetrics = {
 	status: "connected",
 	counts: {
-		waiting: 14502,
-		active: 5,
-		completed: 8230,
-		failed: 112,
-		delayed: 450,
+		waiting: 0,
+		active: 0,
+		completed: 0,
+		failed: 0,
+		delayed: 0,
 	},
-	currentRate: "4.2 pages/sec",
-	topDomainsWaiting: [
-		{ domain: "example.com", count: 5000 },
-		{ domain: "wikipedia.org", count: 3200 },
-	],
+	currentRate: "0.0 pages/sec",
+	topDomainsWaiting: [],
 };
 
 export function useQueueMetrics(intervalMs = 3000) {

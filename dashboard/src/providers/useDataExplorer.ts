@@ -1,48 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DataRecord } from "../types";
 
-const MOCK: DataRecord[] = [
-	{
-		id: "64a1b2c3",
-		url: "https://example.com/about",
-		status: 200,
-		title: "About Us - Example Corp",
-		linksFound: 45,
-		timestamp: "2026-02-20T10:05:00Z",
-	},
-	{
-		id: "64a1b2c4",
-		url: "https://example.com/contact",
-		status: 404,
-		title: "Not Found",
-		linksFound: 0,
-		timestamp: "2026-02-20T10:05:02Z",
-	},
-	{
-		id: "64a1b2c5",
-		url: "https://wikipedia.org/wiki/Web_crawler",
-		status: 200,
-		title: "Web crawler - Wikipedia",
-		linksFound: 132,
-		timestamp: "2026-02-20T10:05:08Z",
-	},
-	{
-		id: "64a1b2c6",
-		url: "https://example.com/products",
-		status: 200,
-		title: "Products - Example Corp",
-		linksFound: 27,
-		timestamp: "2026-02-20T10:05:15Z",
-	},
-	{
-		id: "64a1b2c7",
-		url: "https://badsite.com/page",
-		status: 503,
-		title: "Service Unavailable",
-		linksFound: 0,
-		timestamp: "2026-02-20T10:05:20Z",
-	},
-];
+const MOCK: DataRecord[] = [];
 
 export function useDataExplorer(intervalMs = 3000) {
 	const [data, setData] = useState<DataRecord[]>(MOCK);

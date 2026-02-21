@@ -9,6 +9,11 @@ import { StorageService } from "./services/storage";
 async function main() {
 	console.log("[Orchestrator] Starting Scalable Web Crawler System");
 
+	// Debug: show config values
+	console.log(
+		`[Config] useRenderer=${config.useRenderer}, maxDepth=${config.maxDepth}, concurrency=${config.fetcherConcurrency}`,
+	);
+
 	// Init Services
 	const storage = new StorageService();
 	await storage.connect();
@@ -24,9 +29,18 @@ async function main() {
 
 	let renderer: RendererAgent | null = null;
 	if (config.useRenderer) {
-		renderer = new RendererAgent();
-		await renderer.init();
-		console.log("[Orchestrator] Initialized Renderer Agent (Puppeteer)");
+		try {
+			const r = new RendererAgent();
+			await r.init();
+			renderer = r;
+			console.log("[Orchestrator] Initialized Renderer Agent (Puppeteer)");
+		} catch (err) {
+			console.warn(
+				"[Orchestrator] Failed to initialize Renderer Agent — continuing without JavaScript rendering:",
+				(err as Error).message,
+			);
+			renderer = null;
+		}
 	}
 
 	// Init Fetcher Agent
