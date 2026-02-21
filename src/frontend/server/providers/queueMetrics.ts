@@ -1,6 +1,7 @@
-import Queue from "bull";
+import type Queue from "bull";
 import Redis from "ioredis";
 import { config } from "../../../config";
+import { Frontier } from "../../../services/frontier";
 
 export interface QueueCounts {
 	waiting: number;
@@ -17,6 +18,7 @@ export interface TopDomain {
 
 export interface QueueMetrics {
 	status: "connected" | "offline";
+	isPaused: boolean;
 	counts: QueueCounts;
 	currentRate: string;
 	topDomainsWaiting: TopDomain[];
@@ -24,6 +26,7 @@ export interface QueueMetrics {
 
 const OFFLINE_METRICS: QueueMetrics = {
 	status: "offline",
+	isPaused: false,
 	counts: {
 		waiting: 0,
 		active: 0,
@@ -39,7 +42,7 @@ const OFFLINE_METRICS: QueueMetrics = {
 // Singletons
 // ---------------------------------------------------------------------------
 
-let queue: Queue.Queue | null = null;
+let frontier: Frontier | null = null;
 let redisClient: Redis | null = null;
 let listenerAttached = false;
 
@@ -66,11 +69,11 @@ function getRedis(): Redis {
 	return redisClient;
 }
 
-function getQueue(): Queue.Queue {
-	if (!queue) {
-		queue = new Queue("crawler-frontier", config.redisUrl);
+function getFrontier(): Frontier {
+	if (!frontier) {
+		frontier = new Frontier("crawler-frontier");
 	}
-	return queue;
+	return frontier;
 }
 
 /**
@@ -93,7 +96,7 @@ async function ensureCompletedListener(): Promise<void> {
 		_completedLoaded = true; // proceed with 0
 	}
 
-	const q = getQueue();
+	const q = getFrontier().getQueue();
 
 	// Bull emits 'global:completed' whenever any worker finishes a job
 	q.on("global:completed", () => {
@@ -113,7 +116,7 @@ export async function getQueueMetrics(): Promise<QueueMetrics> {
 	try {
 		await ensureCompletedListener();
 
-		const q = getQueue();
+		const q = getFrontier().getQueue();
 		const counts = await q.getJobCounts();
 
 		// Crawl rate: delta of our accurate completedCount between polls
@@ -148,8 +151,11 @@ export async function getQueueMetrics(): Promise<QueueMetrics> {
 			.slice(0, 5)
 			.map(([domain, count]) => ({ domain, count }));
 
+		const isPaused = await q.isPaused(false);
+
 		return {
 			status: "connected",
+			isPaused,
 			counts: {
 				waiting: counts.waiting,
 				active: counts.active,
@@ -168,5 +174,5 @@ export async function getQueueMetrics(): Promise<QueueMetrics> {
 }
 
 export function getQueueInstance(): Queue.Queue | null {
-	return queue;
+	return frontier ? frontier.getQueue() : null;
 }

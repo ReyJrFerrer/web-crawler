@@ -11,7 +11,12 @@ export class Frontier {
 	private queue: Queue.Queue;
 
 	constructor(queueName = "crawler-frontier") {
-		this.queue = new Queue(queueName, config.redisUrl);
+		this.queue = new Queue(queueName, config.redisUrl, {
+			settings: {
+				lockDuration: 120000, // 2 minutes (prevents SPA rendering timeouts from stalling jobs)
+				maxStalledCount: 2,
+			},
+		});
 	}
 
 	private hashDomain(domain: string): number {
@@ -60,6 +65,27 @@ export class Frontier {
 
 	getQueue() {
 		return this.queue;
+	}
+
+	async pause(isLocal = false) {
+		console.log(`[Frontier] Pausing queue (local: ${isLocal})...`);
+		return this.queue.pause(isLocal);
+	}
+
+	async resume(isLocal = false) {
+		console.log(`[Frontier] Resuming queue (local: ${isLocal})...`);
+		return this.queue.resume(isLocal);
+	}
+
+	async empty() {
+		console.log(
+			"[Frontier] Emptying queue (removing waiting/delayed/paused jobs)...",
+		);
+		return this.queue.empty();
+	}
+
+	async isPaused(isLocal = false) {
+		return this.queue.isPaused(isLocal);
 	}
 
 	async close() {

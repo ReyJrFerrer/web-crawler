@@ -15,6 +15,7 @@ export interface TopDomain {
 
 export interface QueueMetrics {
 	status: "connected" | "offline";
+	isPaused?: boolean;
 	counts: QueueCounts;
 	currentRate: string;
 	topDomainsWaiting: TopDomain[];

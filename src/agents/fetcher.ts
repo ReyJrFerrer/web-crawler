@@ -161,6 +161,30 @@ export class FetcherAgent {
 	startListening() {
 		const queue = this.frontier.getQueue();
 
+		queue.on("paused", () => {
+			console.log("[Fetcher] Queue has been paused. Workers are suspended.");
+		});
+
+		queue.on("resumed", () => {
+			console.log("[Fetcher] Queue has been resumed. Workers are active.");
+		});
+
+		queue.on("cleaned", (jobs, type) => {
+			console.log(
+				`[Fetcher] Queue has been cleaned. Removed ${jobs.length} jobs of type ${type}.`,
+			);
+		});
+
+		queue.on("error", (error) => {
+			if (error.message?.includes("Missing key for job")) {
+				// Suppress harmless "Missing key for job" errors.
+				// These are expected if the user clears the Redis queue or hits "Stop"
+				// from the dashboard while fetchers are still actively processing a job.
+				return;
+			}
+			console.error("[Fetcher] Queue encountered an error:", error);
+		});
+
 		let partitionsToProcess: number[] = [];
 		if (config.workerPartitionIds) {
 			partitionsToProcess = config.workerPartitionIds

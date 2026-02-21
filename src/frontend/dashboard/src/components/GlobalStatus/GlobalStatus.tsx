@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useErrorLogs } from "../../providers/useErrorLogs";
 import { useQueueJobs } from "../../providers/useQueueJobs";
 import { useQueueMetrics } from "../../providers/useQueueMetrics";
@@ -102,6 +102,13 @@ export function GlobalStatus() {
 
 	const [flushModal, setFlushModal] = useState<ModalTarget>(null);
 	const [flushResult, setFlushResult] = useState<ApiResponse | null>(null);
+
+	// Sync paused state from backend to UI state on load or when another client pauses
+	useEffect(() => {
+		if (queue.isPaused !== undefined && queueState !== "stopped") {
+			setQueueState(queue.isPaused ? "paused" : "running");
+		}
+	}, [queue.isPaused, queueState]);
 
 	async function handleSeed(e: React.FormEvent) {
 		e.preventDefault();
@@ -335,10 +342,10 @@ export function GlobalStatus() {
 						Latest 25 jobs
 					</span>
 				</div>
-				<div className="overflow-x-auto">
+				<div className="overflow-auto max-h-[400px]">
 					<table className="w-full text-left text-sm whitespace-nowrap">
-						<thead>
-							<tr className="border-b border-gray-800 text-gray-500">
+						<thead className="sticky top-0 bg-gray-900 z-10 shadow-[0_1px_0_0_#1f2937]">
+							<tr className="text-gray-500">
 								<th className="py-2 px-3 font-medium">Job ID</th>
 								<th className="py-2 px-3 font-medium">URL</th>
 								<th className="py-2 px-3 font-medium">State</th>

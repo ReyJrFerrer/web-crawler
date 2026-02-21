@@ -20,17 +20,20 @@ export async function getQueueJobs(limit = 50): Promise<QueueJobEntry[]> {
 			true,
 		);
 
-		const mappedJobs = await Promise.all(
-			jobs.map(async (job) => {
-				const state = (await job.getState()) as QueueJobEntry["state"];
-				return {
-					id: String(job.id),
-					url: (job.data as { url?: string })?.url || "unknown",
-					state: state || "waiting",
-					timestamp: new Date(job.timestamp).toISOString(),
-				};
-			}),
-		);
+		const mappedJobs = (
+			await Promise.all(
+				jobs.map(async (job) => {
+					if (!job) return null;
+					const state = (await job.getState()) as QueueJobEntry["state"];
+					return {
+						id: String(job.id),
+						url: (job.data as { url?: string })?.url || "unknown",
+						state: state || "waiting",
+						timestamp: new Date(job.timestamp).toISOString(),
+					};
+				}),
+			)
+		).filter((j): j is NonNullable<typeof j> => j !== null);
 
 		return mappedJobs;
 	} catch (e) {

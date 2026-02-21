@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import type { WorkerHealth } from "../types";
 
-const MOCK: WorkerHealth = {
-	workersOnline: 0,
-	metrics: [],
-	dnsCacheEntries: 0,
-};
-
 export function useWorkerHealth(intervalMs = 3000) {
-	const [data, setData] = useState<WorkerHealth>(MOCK);
+	const [data, setData] = useState<WorkerHealth>({
+		workersOnline: 0,
+		metrics: [],
+		dnsCacheEntries: 0,
+	});
 	const [isOffline, setIsOffline] = useState(false);
 	const [loading, setLoading] = useState(true);
 
@@ -20,7 +18,11 @@ export function useWorkerHealth(intervalMs = 3000) {
 			setData(json);
 			setIsOffline(false);
 		} catch {
-			setData(MOCK);
+			setData({
+				workersOnline: 0,
+				metrics: [],
+				dnsCacheEntries: 0,
+			});
 			setIsOffline(true);
 		} finally {
 			setLoading(false);
