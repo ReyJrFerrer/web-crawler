@@ -9,8 +9,8 @@ router.get("/queue", async (_req, res) => {
 	res.json(data);
 });
 
-router.get("/system", (_req, res) => {
-	const data = getWorkerHealth();
+router.get("/system", async (_req, res) => {
+	const data = await getWorkerHealth();
 	res.json(data);
 });
 

@@ -51,6 +51,7 @@ export interface ErrorLogEntry {
 	url: string;
 	error: string;
 	attempts: number;
+	ts?: string;
 }
 
 // ── Control Panel ────────────────────────────────────────────────────────────

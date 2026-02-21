@@ -7,7 +7,5 @@ export const config = {
 	userAgent:
 		process.env.USER_AGENT || "MyCrawler/2.0 (+http://example.com/bot)",
 	useRenderer:
-		process.env.USE_RENDERER === "true" ||
-		process.env.USE_RENDERER === "1" ||
-		true,
+		process.env.USE_RENDERER === "true" || process.env.USE_RENDERER === "1",
 };

@@ -55,7 +55,10 @@ router.post("/seed", async (req, res) => {
 // POST /api/queue/pause
 router.post("/pause", async (_req, res) => {
 	try {
-		await getPauseQueue().pause();
+		// Pass true to pause immediately (isLocal=true) rather than waiting for
+		// in-flight jobs to drain. This sets the Redis pause key instantly so the
+		// crawler's worker loop stops picking up new jobs on its next tick.
+		await getPauseQueue().pause(true);
 		res.json({ success: true, status: "paused" });
 	} catch (err) {
 		console.error("[control] pause error:", err);

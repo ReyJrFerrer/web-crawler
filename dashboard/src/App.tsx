@@ -1,9 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { ControlPanel } from "./components/ControlPanel/ControlPanel";
 import { DataExplorer } from "./components/DataExplorer/DataExplorer";
 import { GlobalStatus } from "./components/GlobalStatus/GlobalStatus";
 import { Layout } from "./components/Layout/Layout";
-import { QueueAnalytics } from "./components/QueueAnalytics/QueueAnalytics";
 import { WorkerFleet } from "./components/WorkerFleet/WorkerFleet";
 import { useDataExplorer } from "./providers/useDataExplorer";
 import { useErrorLogs } from "./providers/useErrorLogs";
@@ -27,10 +25,8 @@ export default function App() {
 			<Layout isOffline={isOffline}>
 				<Routes>
 					<Route path="/" element={<GlobalStatus />} />
-					<Route path="/queue" element={<QueueAnalytics />} />
 					<Route path="/workers" element={<WorkerFleet />} />
 					<Route path="/data" element={<DataExplorer />} />
-					<Route path="/control" element={<ControlPanel />} />
 				</Routes>
 			</Layout>
 		</BrowserRouter>

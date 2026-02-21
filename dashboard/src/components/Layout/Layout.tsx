@@ -3,10 +3,8 @@ import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
 	{ to: "/", label: "Command Center", icon: "⬡" },
-	{ to: "/queue", label: "Queue Analytics", icon: "⬢" },
-	{ to: "/workers", label: "Worker Fleet", icon: "⬡" },
-	{ to: "/data", label: "Data Explorer", icon: "⬢" },
-	{ to: "/control", label: "Control Panel", icon: "⬡" },
+	{ to: "/workers", label: "Worker Fleet", icon: "⬢" },
+	{ to: "/data", label: "Data Explorer", icon: "⬡" },
 ];
 
 interface LayoutProps {

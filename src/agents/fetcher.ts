@@ -1,4 +1,5 @@
 import axios from "axios";
+import Redis from "ioredis";
 import { config } from "../config";
 import type { Frontier } from "../services/frontier";
 import type { StorageService } from "../services/storage";
@@ -8,6 +9,39 @@ import { isAllowedByRobots } from "../utils/robots";
 import type { DuplicateEliminator } from "./eliminator";
 import type { ParserAgent } from "./parser";
 import type { RendererAgent } from "./renderer";
+
+// Shared Redis client for pushing error telemetry — lazy singleton
+let errorRedis: Redis | null = null;
+function getErrorRedis(): Redis {
+	if (!errorRedis) {
+		errorRedis = new Redis(config.redisUrl, { lazyConnect: false });
+	}
+	return errorRedis;
+}
+
+const ERROR_LIST_KEY = "crawler:errors";
+const ERROR_LIST_MAX = 100;
+
+/**
+ * Fire-and-forget: push a structured error entry to the Redis list so the
+ * dashboard can read it immediately without waiting for Bull retries to exhaust.
+ */
+function pushErrorToRedis(url: string, error: string, attempts: number): void {
+	const entry = JSON.stringify({
+		url,
+		error,
+		attempts,
+		ts: new Date().toISOString(),
+	});
+	const redis = getErrorRedis();
+	// LPUSH then LTRIM to keep the list capped at ERROR_LIST_MAX entries
+	redis
+		.lpush(ERROR_LIST_KEY, entry)
+		.then(() => redis.ltrim(ERROR_LIST_KEY, 0, ERROR_LIST_MAX - 1))
+		.catch(() => {
+			/* ignore — telemetry must never crash the crawler */
+		});
+}
 
 export class FetcherAgent {
 	private frontier: Frontier;
@@ -43,7 +77,11 @@ export class FetcherAgent {
 		return false;
 	}
 
-	async fetchAndProcess(url: string, depth: number): Promise<boolean> {
+	async fetchAndProcess(
+		url: string,
+		depth: number,
+		attempt = 1,
+	): Promise<boolean> {
 		try {
 			if (depth > config.maxDepth) {
 				console.log(`[Fetcher] Max depth reached for ${url}`);
@@ -70,9 +108,11 @@ export class FetcherAgent {
 			});
 
 			if (response.status !== 200 || !response.data) {
+				const msg = `Non-200 response: ${response.status}`;
 				console.error(
 					`[Fetcher] Failed to fetch ${url}, status: ${response.status}`,
 				);
+				pushErrorToRedis(url, msg, attempt);
 				return false;
 			}
 
@@ -133,6 +173,7 @@ export class FetcherAgent {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
 			console.error(`[Fetcher] Error fetching ${url}:`, errorMessage);
+			pushErrorToRedis(url, errorMessage, attempt);
 			return false;
 		}
 	}
@@ -141,7 +182,11 @@ export class FetcherAgent {
 		const queue = this.frontier.getQueue();
 		queue.process(config.fetcherConcurrency, async (job) => {
 			const { url, depth } = job.data;
-			const success = await this.fetchAndProcess(url, depth);
+			const success = await this.fetchAndProcess(
+				url,
+				depth,
+				job.attemptsMade + 1,
+			);
 			if (!success) {
 				throw new Error(`Failed to process ${url}`);
 			}

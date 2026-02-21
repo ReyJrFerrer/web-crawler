@@ -1,3 +1,5 @@
+import { getQueueInstance } from "./queueMetrics";
+
 export interface MetricPoint {
 	time: string;
 	ram_mb: number;
@@ -62,15 +64,31 @@ setInterval(() => {
 	}
 }, 3000);
 
-export function getWorkerHealth(): WorkerHealth {
+export async function getWorkerHealth(): Promise<WorkerHealth> {
 	try {
+		// Bull tracks every process that has called queue.process() in a Redis
+		// sorted set. getWorkers() returns those client entries — one per
+		// concurrency slot, grouped under the same process. We ask for the raw
+		// list and count distinct worker processes by client name prefix.
+		const q = getQueueInstance();
+		let workersOnline = 0;
+
+		if (q) {
+			try {
+				const workers = await q.getWorkers();
+				// Each worker process registers with a name like "bull:crawler-frontier:..."
+				// workers is an array of client info objects; its length equals the
+				// number of active subscriber connections (one per worker process).
+				workersOnline = workers.length;
+			} catch {
+				// getWorkers() can throw if Redis is briefly unavailable — fall back to 0
+				workersOnline = 0;
+			}
+		}
+
 		return {
-			// The BFF process itself counts as 1 worker; in production this would
-			// query an orchestration layer for the real count.
-			workersOnline: 1,
+			workersOnline,
 			metrics: [...history],
-			// DNS cache size is not directly queryable from the BFF — return a
-			// stable approximation based on history length as a proxy.
 			dnsCacheEntries: history.length * 28,
 		};
 	} catch {
