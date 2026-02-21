@@ -12,19 +12,9 @@ export interface WorkerHealth {
 	dnsCacheEntries: number;
 }
 
-const MOCK: WorkerHealth = {
-	workersOnline: 3,
-	metrics: [
-		{ time: "10:00", ram_mb: 120, cpu_percent: 15 },
-		{ time: "10:01", ram_mb: 125, cpu_percent: 22 },
-		{ time: "10:02", ram_mb: 123, cpu_percent: 18 },
-	],
-	dnsCacheEntries: 842,
-};
-
 // Rolling history — keep last 30 data points
 const MAX_POINTS = 30;
-const history: MetricPoint[] = [...MOCK.metrics];
+const history: MetricPoint[] = [];
 
 let prevCpuUsage = process.cpuUsage();
 let prevCpuTime = Date.now();
@@ -92,6 +82,10 @@ export async function getWorkerHealth(): Promise<WorkerHealth> {
 			dnsCacheEntries: history.length * 28,
 		};
 	} catch {
-		return MOCK;
+		return {
+			workersOnline: 0,
+			metrics: [...history],
+			dnsCacheEntries: 0,
+		};
 	}
 }

@@ -3,6 +3,7 @@ import { FetcherAgent } from "./agents/fetcher";
 import { ParserAgent } from "./agents/parser";
 import { RendererAgent } from "./agents/renderer";
 import { config } from "./config";
+import { startDashboard } from "./frontend/server/index";
 import { Frontier } from "./services/frontier";
 import { StorageService } from "./services/storage";
 
@@ -54,6 +55,9 @@ async function main() {
 
 	// Start pipeline
 	fetcher.startListening();
+
+	// Start Dashboard UI
+	startDashboard();
 
 	console.log("[Orchestrator] System running and waiting for seeds.");
 

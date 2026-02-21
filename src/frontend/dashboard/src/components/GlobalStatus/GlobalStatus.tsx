@@ -293,7 +293,7 @@ export function GlobalStatus() {
 						) : (
 							errors.map((entry, i) => (
 								<div
-									key={i}
+									key={`${entry.url}-${i}`}
 									className="bg-gray-800 rounded-lg px-3 py-2 text-xs font-mono"
 								>
 									<p className="text-red-400 truncate">{entry.url}</p>
@@ -376,6 +376,7 @@ export function GlobalStatus() {
 						: "Immediately pause the BullMQ queue. Workers stop on their next tick — no new jobs will start."}
 				</p>
 				<button
+					type="button"
 					onClick={handleTogglePause}
 					disabled={pauseLoading}
 					className={`px-6 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${

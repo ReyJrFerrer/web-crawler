@@ -30,6 +30,13 @@ Developer: Reynaldo
     - Added `QUEUE_PARTITIONS` and `WORKER_PARTITION_IDS` configuration variables to `config.ts`.
     - Added hash routing validation tests in `tests/frontier.test.ts`.
 
+- Dashboard Integration:
+    - Built the `crawler-dashboard` Vite React app and configured it to be served by an Express BFF server.
+    - Updated `src/frontend/server/index.ts` to properly handle Express 5 `path-to-regexp` catch-all routing for SPA functionality.
+    - Added `express` and `cors` to the root project dependencies for the BFF API.
+    - Fixed incorrect `config` import paths in `control.ts`, `dataExplorer.ts`, `queueMetrics.ts`, and `errorLogs.ts` inside the `src/frontend/server/` directory.
+    - Updated `src/index.ts` to expose the backend-for-frontend on port 4000 alongside the crawler's orchestrator layer.
+
 Bugs Found 
 - Too Deep Fetching
     - Description: 

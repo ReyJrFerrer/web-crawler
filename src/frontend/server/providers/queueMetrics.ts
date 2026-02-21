@@ -1,6 +1,6 @@
 import Queue from "bull";
 import Redis from "ioredis";
-import { config } from "../../src/config";
+import { config } from "../../../config";
 
 export interface QueueCounts {
 	waiting: number;
@@ -22,20 +22,17 @@ export interface QueueMetrics {
 	topDomainsWaiting: TopDomain[];
 }
 
-const MOCK: QueueMetrics = {
-	status: "connected",
+const OFFLINE_METRICS: QueueMetrics = {
+	status: "offline",
 	counts: {
-		waiting: 14502,
-		active: 5,
-		completed: 8230,
-		failed: 112,
-		delayed: 450,
+		waiting: 0,
+		active: 0,
+		completed: 0,
+		failed: 0,
+		delayed: 0,
 	},
-	currentRate: "4.2 pages/sec",
-	topDomainsWaiting: [
-		{ domain: "example.com", count: 5000 },
-		{ domain: "wikipedia.org", count: 3200 },
-	],
+	currentRate: "0.0 pages/sec",
+	topDomainsWaiting: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -50,7 +47,7 @@ let listenerAttached = false;
 // up-to-date via the Bull global:completed event so we never rely on
 // getJobCounts().completed (which is always 0 because removeOnComplete: true).
 let completedCount = 0;
-let completedLoaded = false;
+let _completedLoaded = false;
 
 // Crawl-rate tracking
 let lastCompletedSnapshot = 0;
@@ -91,9 +88,9 @@ async function ensureCompletedListener(): Promise<void> {
 	try {
 		const stored = await redis.get(COMPLETED_KEY);
 		completedCount = stored ? parseInt(stored, 10) : 0;
-		completedLoaded = true;
+		_completedLoaded = true;
 	} catch {
-		completedLoaded = true; // proceed with 0
+		_completedLoaded = true; // proceed with 0
 	}
 
 	const q = getQueue();
@@ -163,13 +160,10 @@ export async function getQueueMetrics(): Promise<QueueMetrics> {
 				delayed: counts.delayed,
 			},
 			currentRate: `${rate} pages/sec`,
-			topDomainsWaiting:
-				topDomainsWaiting.length > 0
-					? topDomainsWaiting
-					: MOCK.topDomainsWaiting,
+			topDomainsWaiting,
 		};
 	} catch {
-		return { ...MOCK, status: "offline" };
+		return OFFLINE_METRICS;
 	}
 }
 

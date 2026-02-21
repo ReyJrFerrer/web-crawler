@@ -2,8 +2,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import Queue from "bull";
 import { Router } from "express";
-import { config } from "../../src/config";
-import { Frontier } from "../../src/services/frontier";
+import { config } from "../../../config";
+import { Frontier } from "../../../services/frontier";
 
 const execFileAsync = promisify(execFile);
 

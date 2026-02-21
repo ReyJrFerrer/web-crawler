@@ -1,6 +1,6 @@
 import Queue from "bull";
 import Redis from "ioredis";
-import { config } from "../../src/config";
+import { config } from "../../../config.ts";
 
 export interface ErrorLogEntry {
 	url: string;
@@ -8,25 +8,6 @@ export interface ErrorLogEntry {
 	attempts: number;
 	ts?: string;
 }
-
-// Mock is ONLY used when Redis itself is unreachable (true offline mode)
-const MOCK: ErrorLogEntry[] = [
-	{
-		url: "https://badsite.com",
-		error: "Timeout exceeded (10000ms)",
-		attempts: 3,
-	},
-	{
-		url: "https://secure.com",
-		error: "403 Forbidden - WAF Block",
-		attempts: 1,
-	},
-	{
-		url: "https://hugepdf.com/file.pdf",
-		error: "Aborted: Invalid Content-Type",
-		attempts: 1,
-	},
-];
 
 const ERROR_LIST_KEY = "crawler:errors";
 
@@ -106,10 +87,10 @@ export async function getErrorLogs(limit = 50): Promise<ErrorLogEntry[]> {
 			if (merged.length >= limit) break;
 		}
 
-		// Return empty array if truly nothing has errored — never show mock when online
+		// Return empty array if truly nothing has errored
 		return merged;
 	} catch {
 		// Only reach here if Redis and Bull are both unreachable
-		return MOCK;
+		return [];
 	}
 }
