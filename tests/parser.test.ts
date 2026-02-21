@@ -1,11 +1,23 @@
-import { expect, test, describe } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { ParserAgent } from "../src/agents/parser";
+import { config } from "../src/config";
 
 describe("Parser Agent", () => {
-  const parser = new ParserAgent();
+	const parser = new ParserAgent();
+	let originalDomainFilter: boolean;
 
-  test("should extract title and links from HTML", () => {
-    const html = `
+	beforeAll(() => {
+		originalDomainFilter = config.domainFilter;
+		config.domainFilter = true; // force true for testing
+	});
+
+	afterAll(() => {
+		config.domainFilter = originalDomainFilter;
+	});
+
+	test("should extract title and links from HTML, respecting domain restriction", () => {
+		// 1. Scraping from seed domain (allows external link like other.com)
+		const html1 = `
       <html>
         <head><title>Test Title</title></head>
         <body>
@@ -15,20 +27,82 @@ describe("Parser Agent", () => {
         </body>
       </html>
     `;
-    const baseUrl = "https://example.com/home";
-    const result = parser.parse(baseUrl, html);
+		const baseUrl1 = "https://example.com/home";
+		const result1 = parser.parse(baseUrl1, html1, "example.com");
 
-    expect(result.title).toBe("Test Title");
-    expect(result.links.length).toBe(3);
-    expect(result.links).toContain("https://example.com/about");
-    expect(result.links).toContain("https://other.com/page");
-    expect(result.links).toContain("https://example.com/invalid");
-  });
+		expect(result1.title).toBe("Test Title");
+		// Should NOT drop "https://other.com/page" because we allow scraping embedded links
+		expect(result1.links.length).toBe(3);
+		expect(result1.links).toContain("https://example.com/about");
+		expect(result1.links).toContain("https://example.com/invalid");
+		expect(result1.links).toContain("https://other.com/page");
 
-  test("should handle missing title gracefully", () => {
-    const html = `<html><body><p>No title</p></body></html>`;
-    const result = parser.parse("https://example.com", html);
-    expect(result.title).toBe("");
-    expect(result.links.length).toBe(0);
-  });
+		// 2. Scraping from external domain (should restrict further external links)
+		const html2 = `
+      <html>
+        <body>
+          <a href="/about">About (Internal to other.com)</a>
+          <a href="https://yetanother.com/page">Yet Another</a>
+          <a href="https://example.com/back">Back to Seed</a>
+        </body>
+      </html>
+    `;
+		const baseUrl2 = "https://other.com/page";
+		const result2 = parser.parse(baseUrl2, html2, "example.com");
+
+		// If config has domainFilter true, we restrict:
+		// "https://other.com/about" -> urlObj.hostname = "other.com" !== "example.com". Dropped!
+		// "https://yetanother.com/page" -> hostname = "yetanother.com" !== "example.com". Dropped!
+		// "https://example.com/back" -> hostname = "example.com" === "example.com". Kept!
+
+		expect(result2.links.length).toBe(1);
+		expect(result2.links).toContain("https://example.com/back");
+		expect(result2.links).not.toContain("https://other.com/about");
+		expect(result2.links).not.toContain("https://yetanother.com/page");
+	});
+
+	test("should handle missing title gracefully", () => {
+		const html = `<html><body><p>No title</p></body></html>`;
+		const result = parser.parse("https://example.com", html);
+		expect(result.title).toBe("");
+		expect(result.links.length).toBe(0);
+	});
+
+	test("should detect and drop spider traps (path repetition)", () => {
+		const html = `
+      <html>
+        <body>
+          <a href="/calendar/2026/01/01/calendar/2026/01/01">Repeated Path</a>
+          <a href="/normal/page">Normal Page</a>
+        </body>
+      </html>
+    `;
+		const baseUrl = "https://example.com/";
+		const result = parser.parse(baseUrl, html);
+
+		expect(result.links).not.toContain(
+			"https://example.com/calendar/2026/01/01/calendar/2026/01/01",
+		);
+		expect(result.links).toContain("https://example.com/normal/page");
+	});
+
+	test("should check url depth limits", () => {
+		// MAX_DEPTH is 5
+		// If a url has more than 5 path segments, it might be considered too deep.
+		// Or depth tracking could be the queue depth?
+		// "URL depth limits and Path-repetition detection algorithm"
+		const html = `
+      <html>
+        <body>
+          <a href="/1/2/3/4/5/6">Too Deep</a>
+          <a href="/1/2/3">Not Too Deep</a>
+        </body>
+      </html>
+    `;
+		const baseUrl = "https://example.com/";
+		const result = parser.parse(baseUrl, html);
+
+		expect(result.links).not.toContain("https://example.com/1/2/3/4/5/6");
+		expect(result.links).toContain("https://example.com/1/2/3");
+	});
 });

@@ -24,7 +24,13 @@ async function main() {
 	const frontier = new Frontier();
 
 	for (const url of urls) {
-		await frontier.addUrl(url, 0);
+		let originalDomain: string | undefined;
+		try {
+			originalDomain = new URL(url).hostname;
+		} catch (_e) {
+			// ignore invalid URL at seed stage, let fetcher handle it
+		}
+		await frontier.addUrl(url, 0, originalDomain);
 		console.log(`[Seed Injector] Injected: ${url}`);
 	}
 

@@ -4,6 +4,7 @@ import { config } from "../config";
 export interface CrawlJobData {
 	url: string;
 	depth: number;
+	originalDomain?: string;
 }
 
 export class Frontier {
@@ -13,7 +14,7 @@ export class Frontier {
 		this.queue = new Queue(queueName, config.redisUrl);
 	}
 
-	async addUrl(url: string, depth = 0) {
+	async addUrl(url: string, depth = 0, originalDomain?: string) {
 		if (depth > config.maxDepth) {
 			console.log(
 				`Skipping ${url}, max depth reached (${depth} > ${config.maxDepth})`,
@@ -21,7 +22,7 @@ export class Frontier {
 			return null;
 		}
 		return this.queue.add(
-			{ url, depth },
+			{ url, depth, originalDomain },
 			{
 				attempts: 3, // Retry up to 3 times
 				backoff: {
