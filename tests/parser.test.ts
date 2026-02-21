@@ -105,4 +105,23 @@ describe("Parser Agent", () => {
 		expect(result.links).not.toContain("https://example.com/1/2/3/4/5/6");
 		expect(result.links).toContain("https://example.com/1/2/3");
 	});
+
+	test("should extract text for deduplication fingerprinting", () => {
+		const html = `
+      <html>
+        <head><title>Title</title></head>
+        <body>
+          <h1>Heading</h1>
+          <p>Some paragraph text.</p>
+          <script>console.log("ignore me")</script>
+          <style>.ignore { display: none; }</style>
+        </body>
+      </html>
+    `;
+		const baseUrl = "https://example.com/";
+		const result = parser.parse(baseUrl, html);
+
+		// "Heading Some paragraph text."
+		expect(result.text).toBe("Heading Some paragraph text.");
+	});
 });

@@ -10,7 +10,15 @@ Developer: Reynaldo
     - Added `tests/renderer.test.ts` to verify SPA rendering and network idle waiting.
     - Updated orchestrator (`src/index.ts`) to gracefully initialize and close the `RendererAgent`.
 
-- Advanced Processing & Scale Foundation:
+-  Deduplicate Content:
+    - Added `simhash-js` dependency for content fingerprinting.
+    - Updated `DuplicateEliminator` to compute Simhash for extracted text and detect near-duplicates by calculating Hamming distance against recently stored content.
+    - Updated `ParserAgent` to correctly extract clean body text, ignoring `script` and `style` tags, for accurate deduplication.
+    - Integrated duplicate content checking within `FetcherAgent` to efficiently drop mirror sites.
+    - Updated `config.ts` to include `SIMHASH_THRESHOLD` environment variable.
+    - Added and updated tests (`tests/eliminator.test.ts`, `tests/parser.test.ts`) to verify duplicate detection and robust text extraction.
+
+- Spider Trap and Domain Restriction Filter:
     - Implemented Spider Trap Protector in `ParserAgent` (URL depth limits & Path-repetition detection algorithm).
     - Implemented Domain Restriction Filter in `ParserAgent` to prevent escaping the original target domain.
     - Updated `tests/parser.test.ts` to verify domain restriction and spider trap handling.

@@ -42,11 +42,16 @@ class MockFrontier {
 class MockParser {
 	parse(url: string, html: string) {
 		if (html.includes("RENDERED_SPA")) {
-			return { title: "SPA Test", links: ["http://spa.com/page2"] };
+			return {
+				title: "SPA Test",
+				links: ["http://spa.com/page2"],
+				text: "rendered content",
+			};
 		}
 		return {
 			title: "Test",
 			links: ["http://example.com/1", "http://other.com/"],
+			text: "normal content",
 		};
 	}
 }
@@ -54,6 +59,9 @@ class MockParser {
 class MockEliminator {
 	isNew(url: string) {
 		return true;
+	}
+	isDuplicateContent(text: string) {
+		return false;
 	}
 }
 
