@@ -1,4 +1,5 @@
 Feb 21, 2026
+Developer: Reynaldo 
 - Advanced Processing & Scale Foundation:
     - Added `puppeteer` dependency for headless browser rendering.
     - Implemented `RendererAgent` to execute JavaScript and render dynamic Single Page Applications (SPAs).
@@ -9,7 +10,18 @@ Feb 21, 2026
     - Added `tests/renderer.test.ts` to verify SPA rendering and network idle waiting.
     - Updated orchestrator (`src/index.ts`) to gracefully initialize and close the `RendererAgent`.
 
+    
+Bugs Found 
+- Too Deep Fetching
+    - Description: 
+    When trying to crawl SRV, it scraped the index file after using the renderer, but after encountering youtube video links it then fetched from the youtube site.
+
+    - Fixes: 
+    
+Developer: Jan Dale 
+
 Feb 20, 2026 
+Developer: Reynaldo 
 - Initialized MVP Development: 
     - Set up project structure with Bun and TypeScript.
     - Implemented `FetcherAgent` for core HTML fetching pipeline.
