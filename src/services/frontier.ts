@@ -20,7 +20,18 @@ export class Frontier {
 			);
 			return null;
 		}
-		return this.queue.add({ url, depth });
+		return this.queue.add(
+			{ url, depth },
+			{
+				attempts: 3, // Retry up to 3 times
+				backoff: {
+					type: "exponential",
+					delay: 2000, // 2s -> 4s -> 8s
+				},
+				removeOnComplete: true, // Clean up done jobs
+				removeOnFail: false, // Leave failed jobs in DB acting as Dead-Letter Queue
+			},
+		);
 	}
 
 	getQueue() {

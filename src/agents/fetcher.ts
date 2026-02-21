@@ -2,6 +2,9 @@ import axios from "axios";
 import { config } from "../config";
 import type { Frontier } from "../services/frontier";
 import type { StorageService } from "../services/storage";
+import { httpAgent, httpsAgent } from "../utils/dns-cache";
+import { enforcePerDomainRateLimit } from "../utils/rate-limiter";
+import { isAllowedByRobots } from "../utils/robots";
 import type { DuplicateEliminator } from "./eliminator";
 import type { ParserAgent } from "./parser";
 
@@ -23,11 +26,6 @@ export class FetcherAgent {
 		this.eliminator = eliminator;
 	}
 
-	// This delay ensures we do not hit a server too hard.
-	private async delay(ms: number) {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
-
 	async fetchAndProcess(url: string, depth: number): Promise<boolean> {
 		try {
 			if (depth > config.maxDepth) {
@@ -35,12 +33,23 @@ export class FetcherAgent {
 				return true;
 			}
 
-			await this.delay(config.crawlDelayMs);
+			// 1. Politeness Manager: Check robots.txt
+			const allowed = await isAllowedByRobots(url);
+			if (!allowed) {
+				console.log(`[Fetcher] Skipping ${url} (Disallowed by robots.txt)`);
+				return true; // Return true so it completes the job instead of retrying
+			}
+
+			// 2. Per-domain rate limiting (Day 3 enhancement)
+			await enforcePerDomainRateLimit(url, config.crawlDelayMs);
 			console.log(`[Fetcher] Fetching URL: ${url} (Depth: ${depth})`);
 
+			// 3. Download HTML (using cacheable-lookup DNS Cache)
 			const response = await axios.get(url, {
 				headers: { "User-Agent": config.userAgent },
 				timeout: 10000,
+				httpAgent,
+				httpsAgent,
 			});
 
 			if (response.status !== 200 || !response.data) {
