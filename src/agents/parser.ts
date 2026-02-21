@@ -4,19 +4,24 @@ import { config } from "../config";
 export interface ParsedResult {
 	title: string;
 	links: string[];
+	text: string;
 }
 
 export class ParserAgent {
 	parse(baseUrl: string, html: string, originalDomain?: string): ParsedResult {
 		const $ = cheerio.load(html);
 		const title = $("title").text().trim() || "";
+		// Extract raw text for deduplication fingerprinting (SimHash)
+		$("script, style, noscript, iframe").remove();
+		const text = $("body").text().replace(/\s+/g, " ").trim();
+
 		const links: Set<string> = new Set();
 		let baseHostname = "";
 		try {
 			baseHostname = new URL(baseUrl).hostname;
 		} catch (_e) {
 			// invalid base url
-			return { title, links: [] };
+			return { title, links: [], text: "" };
 		}
 		const effectiveOriginalDomain = originalDomain || baseHostname;
 		const isExternalPage = baseHostname !== effectiveOriginalDomain;
@@ -66,6 +71,7 @@ export class ParserAgent {
 		return {
 			title,
 			links: Array.from(links),
+			text,
 		};
 	}
 }

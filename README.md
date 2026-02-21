@@ -20,7 +20,7 @@ docker compose up -d
 ```
 
 The renderer requires headless browser chrome
-/
+
 ```bash
 npx puppeteer browsers install chrome
 ```

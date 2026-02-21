@@ -86,7 +86,7 @@ export class FetcherAgent {
 					: JSON.stringify(response.data);
 
 			// Parse HTML
-			let { title, links } = this.parser.parse(url, html, originalDomain);
+			let { title, links, text } = this.parser.parse(url, html, originalDomain);
 
 			// Detect SPA
 			if (this.isSuspectedSPA(html, links.length)) {
@@ -101,6 +101,7 @@ export class FetcherAgent {
 						const parsed = this.parser.parse(url, html, originalDomain);
 						title = parsed.title;
 						links = parsed.links;
+						text = parsed.text;
 					}
 				} catch (renderError) {
 					console.error(
@@ -108,6 +109,14 @@ export class FetcherAgent {
 						renderError,
 					);
 				}
+			}
+
+			// Content Duplicate Eliminator
+			if (this.eliminator.isDuplicateContent(text)) {
+				console.log(
+					`[Fetcher] Duplicate or mirrored content detected for ${url}. Dropping.`,
+				);
+				return true;
 			}
 
 			// Save raw HTML

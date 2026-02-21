@@ -31,6 +31,7 @@
 		"ioredis": "^5.9.3",
 		"mongodb": "^7.1.0",
 		"puppeteer": "^24.37.5",
-		"robots-parser": "^3.0.1"
+		"robots-parser": "^3.0.1",
+		"simhash-js": "^1.0.0"
 	}
 }
