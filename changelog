@@ -44,6 +44,9 @@ Developer: Reynaldo
     - Implemented and hooked up `ioredis` flush command functionality via a Confirm Modal in the UI.
 
 
+- Fixed Dashboard Queue Pause/Stop Functionality:
+    - Updated backend API endpoints (`/api/queue/pause`, `/api/queue/resume`, `/api/queue/stop`) in `src/frontend/server/routes/control.ts` to use correct `bull` methods (`pause(false)`, `resume(false)`) instead of invalid parameter signatures (`pause(true, false)`).
+
 Bugs Found 
 - Too Deep Fetching
     - Description: 
