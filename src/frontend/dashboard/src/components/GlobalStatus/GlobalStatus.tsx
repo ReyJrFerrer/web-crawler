@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useErrorLogs } from "../../providers/useErrorLogs";
+import { useQueueJobs } from "../../providers/useQueueJobs";
 import { useQueueMetrics } from "../../providers/useQueueMetrics";
 import { useWorkerHealth } from "../../providers/useWorkerHealth";
 import type { ApiResponse } from "../../types";
@@ -86,6 +87,7 @@ export function GlobalStatus() {
 	const { data: queue } = useQueueMetrics();
 	const { data: worker } = useWorkerHealth();
 	const { data: errors } = useErrorLogs();
+	const { data: liveJobs } = useQueueJobs();
 
 	// --- control panel state ---
 	const [seedUrl, setSeedUrl] = useState("");
@@ -94,9 +96,11 @@ export function GlobalStatus() {
 
 	const [pauseLoading, setPauseLoading] = useState(false);
 	const [pauseResult, setPauseResult] = useState<ApiResponse | null>(null);
-	const [isPaused, setIsPaused] = useState(false);
+	const [queueState, setQueueState] = useState<
+		"running" | "paused" | "stopped"
+	>("running");
 
-	const [flushModal, setFlushModal] = useState<"redis" | null>(null);
+	const [flushModal, setFlushModal] = useState<ModalTarget>(null);
 	const [flushResult, setFlushResult] = useState<ApiResponse | null>(null);
 
 	async function handleSeed(e: React.FormEvent) {
@@ -120,15 +124,19 @@ export function GlobalStatus() {
 		}
 	}
 
-	async function handleTogglePause() {
+	async function handleQueueAction(action: "pause" | "resume" | "stop") {
 		setPauseLoading(true);
 		setPauseResult(null);
-		const endpoint = isPaused ? "/api/queue/resume" : "/api/queue/pause";
+		const endpoint = `/api/queue/${action}`;
 		try {
 			const res = await fetch(endpoint, { method: "POST" });
 			const json = (await res.json()) as ApiResponse;
 			setPauseResult(json);
-			if (json.success) setIsPaused(!isPaused);
+			if (json.success) {
+				if (action === "pause") setQueueState("paused");
+				else if (action === "resume") setQueueState("running");
+				else if (action === "stop") setQueueState("stopped");
+			}
 		} catch {
 			setPauseResult({
 				success: false,
@@ -316,6 +324,76 @@ export function GlobalStatus() {
 			</div>
 
 			{/* ------------------------------------------------------------------ */}
+			{/* Live Queue Jobs                                                      */}
+			{/* ------------------------------------------------------------------ */}
+			<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+				<div className="flex justify-between items-end mb-3">
+					<p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+						Live Queue Jobs
+					</p>
+					<span className="text-xs text-gray-600 font-mono">
+						Latest 25 jobs
+					</span>
+				</div>
+				<div className="overflow-x-auto">
+					<table className="w-full text-left text-sm whitespace-nowrap">
+						<thead>
+							<tr className="border-b border-gray-800 text-gray-500">
+								<th className="py-2 px-3 font-medium">Job ID</th>
+								<th className="py-2 px-3 font-medium">URL</th>
+								<th className="py-2 px-3 font-medium">State</th>
+								<th className="py-2 px-3 font-medium text-right">Updated</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-gray-800/50 text-gray-300 font-mono">
+							{liveJobs.length === 0 ? (
+								<tr>
+									<td
+										colSpan={4}
+										className="py-4 text-center text-gray-600 font-sans"
+									>
+										No recent jobs available
+									</td>
+								</tr>
+							) : (
+								liveJobs.map((job) => (
+									<tr
+										key={`${job.id}-${job.state}`}
+										className="hover:bg-gray-800/50 transition-colors"
+									>
+										<td className="py-2 px-3 text-gray-500">{job.id}</td>
+										<td className="py-2 px-3 max-w-sm truncate text-brand-300">
+											{job.url}
+										</td>
+										<td className="py-2 px-3">
+											<span
+												className={`px-2 py-0.5 rounded text-xs ${
+													job.state === "completed"
+														? "bg-emerald-900/40 text-emerald-400"
+														: job.state === "failed"
+															? "bg-red-900/40 text-red-400"
+															: job.state === "active"
+																? "bg-brand-900/40 text-brand-400"
+																: job.state === "delayed"
+																	? "bg-purple-900/40 text-purple-400"
+																	: "bg-gray-800 text-gray-400"
+												}`}
+											>
+												{job.state}
+											</span>
+										</td>
+										<td className="py-2 px-3 text-right text-gray-600">
+											{new Date(job.timestamp).toLocaleTimeString()}
+										</td>
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			{/* ------------------------------------------------------------------ */}
 			{/* Queue Management section heading                                     */}
 			{/* ------------------------------------------------------------------ */}
 			<div className="pt-2">
@@ -371,26 +449,43 @@ export function GlobalStatus() {
 					Kill Switch
 				</p>
 				<p className="text-sm text-gray-400 mb-4">
-					{isPaused
+					{queueState === "paused"
 						? "The queue is currently paused. Workers will not pick up new jobs."
-						: "Immediately pause the BullMQ queue. Workers stop on their next tick — no new jobs will start."}
+						: queueState === "stopped"
+							? "The queue is currently stopped and emptied. You need to start and re-seed the queue."
+							: "Control the queue state. Pause to temporarily halt workers. Stop to pause and empty the entire queue."}
 				</p>
-				<button
-					type="button"
-					onClick={handleTogglePause}
-					disabled={pauseLoading}
-					className={`px-6 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${
-						isPaused
-							? "bg-emerald-700 hover:bg-emerald-600 text-white"
-							: "bg-red-700 hover:bg-red-600 text-white"
-					}`}
-				>
-					{pauseLoading
-						? "Working…"
-						: isPaused
-							? "Resume Queue"
-							: "Pause Queue"}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={() =>
+							handleQueueAction(queueState === "running" ? "pause" : "resume")
+						}
+						disabled={pauseLoading || queueState === "stopped"}
+						className={`px-6 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${
+							queueState === "paused"
+								? "bg-emerald-700 hover:bg-emerald-600 text-white"
+								: "bg-yellow-700 hover:bg-yellow-600 text-white"
+						}`}
+					>
+						{pauseLoading && queueState !== "stopped"
+							? "Working…"
+							: queueState === "paused"
+								? "Resume Queue"
+								: "Pause Queue"}
+					</button>
+
+					<button
+						type="button"
+						onClick={() => handleQueueAction("stop")}
+						disabled={pauseLoading || queueState === "stopped"}
+						className="px-6 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 bg-red-700 hover:bg-red-600 text-white"
+					>
+						{pauseLoading && queueState !== "paused" && queueState !== "running"
+							? "Working…"
+							: "Stop & Empty Queue"}
+					</button>
+				</div>
 				{pauseResult && (
 					<p
 						className={`text-xs mt-2 ${

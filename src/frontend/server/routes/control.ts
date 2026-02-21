@@ -59,10 +59,7 @@ router.post("/seed", async (req, res) => {
 // POST /api/queue/pause
 router.post("/pause", async (_req, res) => {
 	try {
-		// Pass true to pause immediately (isLocal=true) rather than waiting for
-		// in-flight jobs to drain. This sets the Redis pause key instantly so the
-		// crawler's worker loop stops picking up new jobs on its next tick.
-		await getPauseQueue().pause(true);
+		await getPauseQueue().pause(true, false);
 		res.json({ success: true, status: "paused" });
 	} catch (err) {
 		console.error("[control] pause error:", err);
@@ -76,7 +73,7 @@ router.post("/pause", async (_req, res) => {
 // POST /api/queue/resume
 router.post("/resume", async (_req, res) => {
 	try {
-		await getPauseQueue().resume();
+		await getPauseQueue().resume(true);
 		res.json({ success: true, status: "running" });
 	} catch (err) {
 		console.error("[control] resume error:", err);
@@ -87,9 +84,24 @@ router.post("/resume", async (_req, res) => {
 	}
 });
 
+// POST /api/queue/stop
+router.post("/stop", async (_req, res) => {
+	try {
+		// Stop means pause and empty the queue
+		await getPauseQueue().pause(true, true);
+		await getPauseQueue().empty();
+		res.json({ success: true, status: "stopped" });
+	} catch (err) {
+		console.error("[control] stop error:", err);
+		res.status(503).json({
+			success: false,
+			message: "Could not stop queue — Redis may be offline",
+		});
+	}
+});
+
 // POST /api/queue/flush  { target: "redis" }  (dev-only)
-// Runs `docker exec <container> redis-cli flushall` to wipe all Redis data,
-// then falls back to Bull's queue.empty() if Docker is unavailable.
+// Runs `redis.flushall()` to wipe all Redis data.
 router.post("/flush", async (req, res) => {
 	const body = req.body as { target?: string };
 	const target = body.target;
@@ -99,35 +111,15 @@ router.post("/flush", async (req, res) => {
 		return;
 	}
 
-	// Container name: override via REDIS_CONTAINER env var, otherwise derive
-	// from the docker-compose default (project folder = "web-crawler", service = "redis").
-	const container = process.env.REDIS_CONTAINER ?? "web-crawler-redis-1";
-
 	try {
-		const { stdout } = await execFileAsync("docker", [
-			"exec",
-			container,
-			"redis-cli",
-			"flushall",
-		]);
-		console.log(`[control] redis flushall via docker: ${stdout.trim()}`);
-		res.json({ success: true, message: "Redis flushed (docker flushall)" });
-	} catch (dockerErr) {
-		// Docker unavailable or container not running — fall back to Bull queue.empty()
-		console.warn(
-			"[control] docker exec failed, falling back to queue.empty():",
-			(dockerErr as Error).message,
-		);
-		try {
-			await getPauseQueue().empty();
-			res.json({
-				success: true,
-				message: "Redis queue emptied (Bull fallback — docker unavailable)",
-			});
-		} catch (bullErr) {
-			console.error("[control] flush fallback error:", bullErr);
-			res.status(503).json({ success: false, message: "Flush failed" });
-		}
+		const Redis = (await import("ioredis")).default;
+		const redis = new Redis(config.redisUrl);
+		await redis.flushall();
+		redis.disconnect();
+		res.json({ success: true, message: "Redis flushed successfully" });
+	} catch (redisErr) {
+		console.error("[control] flush fallback error:", redisErr);
+		res.status(503).json({ success: false, message: "Flush failed" });
 	}
 });
 

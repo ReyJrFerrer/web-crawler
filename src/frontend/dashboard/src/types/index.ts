@@ -22,6 +22,13 @@ export interface QueueMetrics {
 
 // ── Worker / System Health ───────────────────────────────────────────────────
 
+export interface QueueJobEntry {
+	id: string;
+	url: string;
+	state: "waiting" | "active" | "delayed" | "failed" | "completed";
+	timestamp: string;
+}
+
 export interface MetricPoint {
 	time: string;
 	ram_mb: number;
