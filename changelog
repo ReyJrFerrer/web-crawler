@@ -1,0 +1,24 @@
+Feb 21, 2026
+- Advanced Processing & Scale Foundation:
+    - Added `puppeteer` dependency for headless browser rendering.
+    - Implemented `RendererAgent` to execute JavaScript and render dynamic Single Page Applications (SPAs).
+    - Updated `FetcherAgent` with a heuristic to detect suspected SPAs and route them to the `RendererAgent`.
+    - Added resource blocking (images, media, fonts, css) in `RendererAgent` to optimize rendering speed.
+    - Implemented memory leak protection in `RendererAgent` by automatically restarting the browser context every 50 requests.
+    - Updated `config.ts` to include `USE_RENDERER` environment variable.
+    - Added `tests/renderer.test.ts` to verify SPA rendering and network idle waiting.
+    - Updated orchestrator (`src/index.ts`) to gracefully initialize and close the `RendererAgent`.
+
+Feb 20, 2026 
+- Initialized MVP Development: 
+    - Set up project structure with Bun and TypeScript.
+    - Implemented `FetcherAgent` for core HTML fetching pipeline.
+    - Integrated Redis (`bull`) as the URL Frontier queue.
+    - Integrated MongoDB as the Storage Service for raw HTML and parsed metadata.
+    - Implemented `ParserAgent` using Cheerio to extract titles and links.
+    - Implemented `DuplicateEliminator` using a Bloom Filter for URL deduplication.
+    - Added DNS Caching (`cacheable-lookup`) and Rate Limiting politeness controls.
+    - Added `robots.txt` parsing to respect site crawling rules.
+    - Configured ESLint/Biome for formatting and linting.
+    - Setup initial test suites for agents and services.
+

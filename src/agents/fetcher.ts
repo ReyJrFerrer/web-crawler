@@ -7,23 +7,40 @@ import { enforcePerDomainRateLimit } from "../utils/rate-limiter";
 import { isAllowedByRobots } from "../utils/robots";
 import type { DuplicateEliminator } from "./eliminator";
 import type { ParserAgent } from "./parser";
+import type { RendererAgent } from "./renderer";
 
 export class FetcherAgent {
 	private frontier: Frontier;
 	private storage: StorageService;
 	private parser: ParserAgent;
 	private eliminator: DuplicateEliminator;
+	private renderer: RendererAgent | null;
 
 	constructor(
 		frontier: Frontier,
 		storage: StorageService,
 		parser: ParserAgent,
 		eliminator: DuplicateEliminator,
+		renderer: RendererAgent | null = null,
 	) {
 		this.frontier = frontier;
 		this.storage = storage;
 		this.parser = parser;
 		this.eliminator = eliminator;
+		this.renderer = renderer;
+	}
+
+	private isSuspectedSPA(html: string, linksCount: number): boolean {
+		if (!config.useRenderer || !this.renderer) return false;
+
+		const hasScriptTag = /<script\b[^>]*>/i.test(html);
+		const hasCommonSPARoot = /id=["'](?:root|app)["']/i.test(html);
+
+		if (linksCount <= 2 && hasScriptTag && hasCommonSPARoot) {
+			return true;
+		}
+
+		return false;
 	}
 
 	async fetchAndProcess(url: string, depth: number): Promise<boolean> {
@@ -59,17 +76,39 @@ export class FetcherAgent {
 				return false;
 			}
 
-			const html =
+			let html =
 				typeof response.data === "string"
 					? response.data
 					: JSON.stringify(response.data);
 
+			// Parse HTML
+			let { title, links } = this.parser.parse(url, html);
+
+			// Detect SPA
+			if (this.isSuspectedSPA(html, links.length)) {
+				console.log(
+					`[Fetcher] Suspected SPA detected for ${url}. Handing over to Renderer Agent.`,
+				);
+				try {
+					const renderedHtml = await this.renderer?.render(url);
+					if (renderedHtml) {
+						html = renderedHtml;
+						// Re-parse with the rendered HTML
+						const parsed = this.parser.parse(url, html);
+						title = parsed.title;
+						links = parsed.links;
+					}
+				} catch (renderError) {
+					console.error(
+						`[Fetcher] Renderer failed for ${url}, falling back to raw HTML.`,
+						renderError,
+					);
+				}
+			}
+
 			// Save raw HTML
 			await this.storage.saveRawHtml(url, html);
 			console.log(`[Fetcher] Stored raw HTML for ${url}`);
-
-			// Parse HTML
-			const { title, links } = this.parser.parse(url, html);
 
 			// Save parsed metadata
 			await this.storage.saveParsedData(url, { title, links });
