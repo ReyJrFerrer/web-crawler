@@ -7,7 +7,7 @@ export interface ParsedResult {
 }
 
 export class ParserAgent {
-	parse(baseUrl: string, html: string): ParsedResult {
+	parse(baseUrl: string, html: string, originalDomain?: string): ParsedResult {
 		const $ = cheerio.load(html);
 		const title = $("title").text().trim() || "";
 		const links: Set<string> = new Set();
@@ -18,6 +18,8 @@ export class ParserAgent {
 			// invalid base url
 			return { title, links: [] };
 		}
+		const effectiveOriginalDomain = originalDomain || baseHostname;
+		const isExternalPage = baseHostname !== effectiveOriginalDomain;
 
 		$("a[href]").each((_, el) => {
 			const href = $(el).attr("href");
@@ -30,7 +32,14 @@ export class ParserAgent {
 					if (!absoluteUrl.startsWith("http")) return;
 
 					// Domain Restriction Filter
-					if (urlObj.hostname !== baseHostname) return;
+					if (config.domainFilter) {
+						if (isExternalPage && urlObj.hostname !== effectiveOriginalDomain) {
+							// If we are on an external page (e.g. youtube.com embedded link),
+							// restrict fetching unrelated contents (e.g. other youtube.com links)
+							return;
+						}
+						// If we are NOT on an external page, we allow all links (so we can scrape embedded external links)
+					}
 
 					// Spider Trap Protector: URL depth limits
 					const pathSegments = urlObj.pathname.split("/").filter(Boolean);

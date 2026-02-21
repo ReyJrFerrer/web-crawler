@@ -43,7 +43,11 @@ export class FetcherAgent {
 		return false;
 	}
 
-	async fetchAndProcess(url: string, depth: number): Promise<boolean> {
+	async fetchAndProcess(
+		url: string,
+		depth: number,
+		originalDomain?: string,
+	): Promise<boolean> {
 		try {
 			if (depth > config.maxDepth) {
 				console.log(`[Fetcher] Max depth reached for ${url}`);
@@ -82,7 +86,7 @@ export class FetcherAgent {
 					: JSON.stringify(response.data);
 
 			// Parse HTML
-			let { title, links } = this.parser.parse(url, html);
+			let { title, links } = this.parser.parse(url, html, originalDomain);
 
 			// Detect SPA
 			if (this.isSuspectedSPA(html, links.length)) {
@@ -94,7 +98,7 @@ export class FetcherAgent {
 					if (renderedHtml) {
 						html = renderedHtml;
 						// Re-parse with the rendered HTML
-						const parsed = this.parser.parse(url, html);
+						const parsed = this.parser.parse(url, html, originalDomain);
 						title = parsed.title;
 						links = parsed.links;
 					}
@@ -119,9 +123,17 @@ export class FetcherAgent {
 			// Queue new links
 			if (depth < config.maxDepth) {
 				let addedCount = 0;
+				let defaultDomain = originalDomain;
+				if (!defaultDomain) {
+					try {
+						defaultDomain = new URL(url).hostname;
+					} catch (_e) {
+						// ignore
+					}
+				}
 				for (const link of links) {
 					if (this.eliminator.isNew(link)) {
-						await this.frontier.addUrl(link, depth + 1);
+						await this.frontier.addUrl(link, depth + 1, defaultDomain);
 						addedCount++;
 					}
 				}
@@ -140,8 +152,8 @@ export class FetcherAgent {
 	startListening() {
 		const queue = this.frontier.getQueue();
 		queue.process(config.fetcherConcurrency, async (job) => {
-			const { url, depth } = job.data;
-			const success = await this.fetchAndProcess(url, depth);
+			const { url, depth, originalDomain } = job.data;
+			const success = await this.fetchAndProcess(url, depth, originalDomain);
 			if (!success) {
 				throw new Error(`Failed to process ${url}`);
 			}

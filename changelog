@@ -10,6 +10,11 @@ Developer: Reynaldo
     - Added `tests/renderer.test.ts` to verify SPA rendering and network idle waiting.
     - Updated orchestrator (`src/index.ts`) to gracefully initialize and close the `RendererAgent`.
 
+- Advanced Processing & Scale Foundation:
+    - Implemented Spider Trap Protector in `ParserAgent` (URL depth limits & Path-repetition detection algorithm).
+    - Implemented Domain Restriction Filter in `ParserAgent` to prevent escaping the original target domain.
+    - Updated `tests/parser.test.ts` to verify domain restriction and spider trap handling.
+
     
 Bugs Found 
 - Too Deep Fetching
@@ -17,6 +22,8 @@ Bugs Found
     When trying to crawl SRV, it scraped the index file after using the renderer, but after encountering youtube video links it then fetched from the youtube site.
 
     - Fixes: 
+    Implemented Domain Restriction Filter in ParserAgent to prevent the crawler from escaping the original target domain.
+    Refined Domain Restriction Filter to allow 1-hop embedded links (like youtube or tiktok) from the seed domain but restrict further out-of-bounds crawling by passing originalDomain through the Frontier Queue.
     
 Developer: Jan Dale 
 

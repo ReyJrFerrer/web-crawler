@@ -13,9 +13,16 @@ A distributed, intelligent web crawler system built with Bun, Redis, MongoDB, Bu
 ## Infrastructure
 
 The crawler requires Redis and MongoDB.
+
 Start the backing infrastructure via docker-compose:
 ```bash
 docker compose up -d
+```
+
+The renderer requires headless browser chrome
+/
+```bash
+npx puppeteer browsers install chrome
 ```
 
 ## Setup & Running
