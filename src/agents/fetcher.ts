@@ -133,7 +133,9 @@ export class FetcherAgent {
 
 			// Save raw HTML
 			await this.storage.saveRawHtml(url, html);
-			console.log(`[Fetcher] Stored raw HTML for ${url}`);
+			console.log(
+				`[Fetcher] Stored raw HTML for ${url} (Optimized with ${config.compressionAlgo || "brotli"})`,
+			);
 
 			// Save parsed metadata
 			await this.storage.saveParsedData(url, { title, links });

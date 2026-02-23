@@ -13,4 +13,8 @@ export const config = {
 	simhashThreshold: parseInt(process.env.SIMHASH_THRESHOLD || "3", 10),
 	queuePartitions: parseInt(process.env.QUEUE_PARTITIONS || "10", 10),
 	workerPartitionIds: process.env.WORKER_PARTITION_IDS || "",
+	compressionAlgo: (process.env.COMPRESSION_ALGO || "brotli") as
+		| "brotli"
+		| "gzip"
+		| "none",
 };

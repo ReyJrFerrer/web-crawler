@@ -1,5 +1,13 @@
 Feb 23, 2026
 Developer: Reynaldo
+- Storage Optimizer & Object Storage Adapter:
+    - Added `StorageOptimizer` utility to support Brotli and Gzip compression of raw HTML data.
+    - Added `COMPRESSION_ALGO` environment variable configuration (defaults to `brotli`).
+    - Implemented `ObjectStorageAdapter` interface for future S3 integration.
+    - Created `S3ObjectStorageAdapter` stub to prepare for AWS S3 Storage implementation next time.
+    - Updated `StorageService` to compress raw HTML data before storing in MongoDB as a fallback until S3 is fully integrated.
+    - Added comprehensive unit tests for compression and storage retrieval.
+
 - Fixed False Positive Deduplication Bug:
     - Removed `simhash-js` library which had a critical logic error causing it to return identical or highly similar 32-bit hashes for many different web pages.
     - Implemented a robust custom 64-bit SimHash algorithm in `DuplicateEliminator` utilizing `BigInt` and the `FNV-1a` hash.
