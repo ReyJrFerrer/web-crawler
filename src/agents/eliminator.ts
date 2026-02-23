@@ -1,18 +1,59 @@
 import { BloomFilter } from "bloomfilter";
-import { SimHash } from "simhash-js";
 import { config } from "../config";
+
+/**
+ * Custom 64-bit Simhash implementation to avoid the poor collision
+ * resistance and bugs found in the 32-bit `simhash-js` library.
+ */
+class Simhash64 {
+	private fnv1a64(str: string): bigint {
+		let hash = 0xcbf29ce484222325n;
+		for (let i = 0; i < str.length; i++) {
+			hash ^= BigInt(str.charCodeAt(i));
+			hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+		}
+		return hash;
+	}
+
+	hash(text: string): bigint {
+		// Use k-shingles (e.g. sequences of 3 words) or just words as tokens.
+		// Using words directly is simpler and very robust for full HTML text.
+		const tokens = text.toLowerCase().match(/\w+/g) || [];
+		if (tokens.length === 0) return 0n;
+
+		const v = new Int32Array(64);
+		for (const token of tokens) {
+			const h = this.fnv1a64(token);
+			for (let i = 0; i < 64; i++) {
+				if ((h & (1n << BigInt(i))) !== 0n) {
+					v[i]++;
+				} else {
+					v[i]--;
+				}
+			}
+		}
+
+		let fingerprint = 0n;
+		for (let i = 0; i < 64; i++) {
+			if (v[i] > 0) {
+				fingerprint |= 1n << BigInt(i);
+			}
+		}
+		return fingerprint;
+	}
+}
 
 export class DuplicateEliminator {
 	private filter: BloomFilter;
-	private simhashEngine: SimHash;
+	private simhashEngine: Simhash64;
 	// Store recently processed simhashes to drop near-duplicates
-	private recentHashes: number[] = [];
+	private recentHashes: bigint[] = [];
 	private maxRecentHashes = 10000;
 
 	constructor(size = 32 * 256 * 256, k = 16) {
 		// defaults to 2MB filter size, roughly 10M URLs at 1% error
 		this.filter = new BloomFilter(size, k);
-		this.simhashEngine = new SimHash();
+		this.simhashEngine = new Simhash64();
 	}
 
 	isNew(url: string): boolean {
@@ -51,12 +92,12 @@ export class DuplicateEliminator {
 		return false;
 	}
 
-	private hammingDistance(hash1: number, hash2: number): number {
-		let xor = (hash1 ^ hash2) >>> 0;
+	private hammingDistance(hash1: bigint, hash2: bigint): number {
+		let xor = hash1 ^ hash2;
 		let distance = 0;
-		while (xor > 0) {
-			distance += xor & 1;
-			xor >>>= 1;
+		while (xor > 0n) {
+			distance += Number(xor & 1n);
+			xor >>= 1n;
 		}
 		return distance;
 	}

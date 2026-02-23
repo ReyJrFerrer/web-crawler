@@ -468,16 +468,16 @@ export function GlobalStatus() {
 						onClick={() =>
 							handleQueueAction(queueState === "running" ? "pause" : "resume")
 						}
-						disabled={pauseLoading || queueState === "stopped"}
+						disabled={pauseLoading}
 						className={`px-6 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${
-							queueState === "paused"
+							queueState === "paused" || queueState === "stopped"
 								? "bg-emerald-700 hover:bg-emerald-600 text-white"
 								: "bg-yellow-700 hover:bg-yellow-600 text-white"
 						}`}
 					>
-						{pauseLoading && queueState !== "stopped"
+						{pauseLoading
 							? "Working…"
-							: queueState === "paused"
+							: queueState === "paused" || queueState === "stopped"
 								? "Resume Queue"
 								: "Pause Queue"}
 					</button>

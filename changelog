@@ -1,3 +1,18 @@
+Feb 23, 2026
+Developer: Reynaldo
+- Fixed False Positive Deduplication Bug:
+    - Removed `simhash-js` library which had a critical logic error causing it to return identical or highly similar 32-bit hashes for many different web pages.
+    - Implemented a robust custom 64-bit SimHash algorithm in `DuplicateEliminator` utilizing `BigInt` and the `FNV-1a` hash.
+    - Vastly reduced the probability of false-positive "Duplicate or mirrored content detected" events during crawling.
+    - Improved unit tests for `DuplicateEliminator` to accurately test exact matches, near-duplicates, different generic texts, and max storage capacity.
+
+- Fixed Dashboard Queue Pause/Stop Functionality:
+    - Updated `Frontier` pause method to use `doNotWaitActive=true` to prevent blocking the UI.
+    - Implemented a `crawler:stopped` state in Redis to ensure workers completely halt fetching when "Stop & Empty Queue" is triggered.
+    - Added an early exit check in `FetcherAgent` for both `isPaused` and `isStopped` states so that active jobs gracefully abort or requeue themselves instead of continuing to fetch and queue new URLs.
+    - Fixed UI state in `GlobalStatus.tsx` so users can resume the queue after it has been stopped.
+    - Added comprehensive unit tests for `pause`, `stop`, `resume`, and `empty` in `tests/frontier.test.ts`.
+
 Feb 21, 2026
 Developer: Reynaldo 
 - Advanced Processing & Scale Foundation:
