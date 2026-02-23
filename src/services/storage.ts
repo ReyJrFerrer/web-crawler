@@ -18,6 +18,7 @@ export interface ParsedDataDoc {
 	title: string;
 	links: string[];
 	parsedAt: Date;
+	extractedData?: Record<string, unknown>;
 }
 
 export class StorageService {

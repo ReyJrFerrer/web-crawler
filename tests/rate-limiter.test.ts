@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	enforcePerDomainRateLimit,
 	updateDynamicDelay,
@@ -9,7 +9,7 @@ describe("Dynamic Politeness", () => {
 		const url = "http://test-dynamic.com";
 		updateDynamicDelay(url, 2000, 429, 100);
 
-		const start = Date.now();
+		const _start = Date.now();
 		// Initial enforce should wait for nothing since last fetch is 0,
 		// but wait we need to trigger it twice.
 		await enforcePerDomainRateLimit(url, 2000);

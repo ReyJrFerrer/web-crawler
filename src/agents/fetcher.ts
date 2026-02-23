@@ -162,7 +162,8 @@ export class FetcherAgent {
 					: JSON.stringify(response.data);
 
 			// Parse HTML
-			let { title, links, text } = this.parser.parse(url, html, originalDomain);
+			let parsed = await this.parser.parse(url, html, originalDomain);
+			let { title, links, text } = parsed;
 
 			// Detect SPA
 			if (this.isSuspectedSPA(html, links.length)) {
@@ -174,7 +175,7 @@ export class FetcherAgent {
 					if (renderedHtml) {
 						html = renderedHtml;
 						// Re-parse with the rendered HTML
-						const parsed = this.parser.parse(url, html, originalDomain);
+						parsed = await this.parser.parse(url, html, originalDomain);
 						title = parsed.title;
 						links = parsed.links;
 						text = parsed.text;
@@ -202,7 +203,11 @@ export class FetcherAgent {
 			);
 
 			// Save parsed metadata
-			await this.storage.saveParsedData(url, { title, links });
+			await this.storage.saveParsedData(url, {
+				title,
+				links,
+				extractedData: parsed.extractedData,
+			});
 			console.log(
 				`[Fetcher] Parsed metadata for ${url} (Found ${links.length} links)`,
 			);

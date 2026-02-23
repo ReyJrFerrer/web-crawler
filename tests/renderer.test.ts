@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { Server } from "bun";
 import { RendererAgent } from "../src/agents/renderer";
 
 describe("Renderer Agent (Puppeteer)", () => {
@@ -11,7 +10,7 @@ describe("Renderer Agent (Puppeteer)", () => {
 		// Start a simple HTTP server serving an SPA
 		server = Bun.serve({
 			port,
-			fetch(req) {
+			fetch(_req) {
 				return new Response(
 					`<!DOCTYPE html>
 <html>

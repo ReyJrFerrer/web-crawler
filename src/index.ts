@@ -4,6 +4,10 @@ import { ParserAgent } from "./agents/parser";
 import { RendererAgent } from "./agents/renderer";
 import { config } from "./config";
 import { startDashboard } from "./frontend/server/index";
+import {
+	ElasticsearchIndexerPlugin,
+	MetadataExtractorPlugin,
+} from "./plugins/index";
 import { Frontier } from "./services/frontier";
 import { StorageService } from "./services/storage";
 
@@ -25,6 +29,22 @@ async function main() {
 
 	// Init Intelligence Layer Agents
 	const parser = new ParserAgent();
+
+	// Register production-ready plugins
+	parser.registerPlugin(new MetadataExtractorPlugin());
+	if (config.elasticsearchNode) {
+		parser.registerPlugin(
+			new ElasticsearchIndexerPlugin({
+				node: config.elasticsearchNode,
+				index: config.elasticsearchIndex,
+				apiKey: config.elasticsearchApiKey,
+			}),
+		);
+		console.log(
+			`[Orchestrator] Registered Elasticsearch Indexer Plugin (${config.elasticsearchNode})`,
+		);
+	}
+
 	const eliminator = new DuplicateEliminator();
 	console.log("[Orchestrator] Initialized Parser and Duplicate Eliminator");
 

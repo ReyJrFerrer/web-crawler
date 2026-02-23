@@ -35,11 +35,12 @@ mock.module("axios", () => {
 });
 
 class MockStorage {
+	saveParsedDataMock = mock((url, data) => ({ insertedId: "mock2" }));
 	async saveRawHtml() {
 		return { insertedId: "mock1" };
 	}
-	async saveParsedData() {
-		return { insertedId: "mock2" };
+	async saveParsedData(url: string, data: any) {
+		return this.saveParsedDataMock(url, data);
 	}
 }
 
@@ -59,33 +60,35 @@ class MockFrontier {
 }
 
 class MockParser {
-	parse(url: string, html: string) {
+	parse(_url: string, html: string) {
 		if (html.includes("RENDERED_SPA")) {
 			return {
 				title: "SPA Test",
 				links: ["http://spa.com/page2"],
 				text: "rendered content",
+				extractedData: { isSPA: true },
 			};
 		}
 		return {
 			title: "Test",
 			links: ["http://example.com/1", "http://other.com/"],
 			text: "normal content",
+			extractedData: { isNormal: true },
 		};
 	}
 }
 
 class MockEliminator {
-	isNew(url: string) {
+	isNew(_url: string) {
 		return true;
 	}
-	isDuplicateContent(text: string) {
+	isDuplicateContent(_text: string) {
 		return false;
 	}
 }
 
 class MockRenderer {
-	async render(url: string) {
+	async render(_url: string) {
 		return "<html><body><div id='root'>RENDERED_SPA</div></body></html>";
 	}
 }
@@ -107,11 +110,21 @@ describe("Fetcher Agent with full pipeline", () => {
 	test("should fetch, parse and filter URLs", async () => {
 		const success = await fetcher.fetchAndProcess("http://example.com", 0);
 		expect(success).toBe(true);
+		const mockStorage = (fetcher as any).storage as MockStorage;
+		expect(mockStorage.saveParsedDataMock).toHaveBeenCalledWith(
+			"http://example.com",
+			expect.objectContaining({ extractedData: { isNormal: true } }),
+		);
 	});
 
 	test("should detect and render SPA URLs", async () => {
 		const success = await fetcher.fetchAndProcess("http://spa.com", 0);
 		expect(success).toBe(true);
+		const mockStorage = (fetcher as any).storage as MockStorage;
+		expect(mockStorage.saveParsedDataMock).toHaveBeenCalledWith(
+			"http://spa.com",
+			expect.objectContaining({ extractedData: { isSPA: true } }),
+		);
 	});
 
 	test("should return false on 403 to trigger Dead Letter Queue retry flow and report proxy failure", async () => {

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { ParserAgent } from "../src/agents/parser";
+import { ParserAgent, type ParserPlugin } from "../src/agents/parser";
 import { config } from "../src/config";
 
 describe("Parser Agent", () => {
@@ -15,7 +15,7 @@ describe("Parser Agent", () => {
 		config.domainFilter = originalDomainFilter;
 	});
 
-	test("should extract title and links from HTML, respecting domain restriction", () => {
+	test("should extract title and links from HTML, respecting domain restriction", async () => {
 		// 1. Scraping from seed domain (allows external link like other.com)
 		const html1 = `
       <html>
@@ -28,7 +28,7 @@ describe("Parser Agent", () => {
       </html>
     `;
 		const baseUrl1 = "https://example.com/home";
-		const result1 = parser.parse(baseUrl1, html1, "example.com");
+		const result1 = await parser.parse(baseUrl1, html1, "example.com");
 
 		expect(result1.title).toBe("Test Title");
 		// Should NOT drop "https://other.com/page" because we allow scraping embedded links
@@ -48,7 +48,7 @@ describe("Parser Agent", () => {
       </html>
     `;
 		const baseUrl2 = "https://other.com/page";
-		const result2 = parser.parse(baseUrl2, html2, "example.com");
+		const result2 = await parser.parse(baseUrl2, html2, "example.com");
 
 		// If config has domainFilter true, we restrict:
 		// "https://other.com/about" -> urlObj.hostname = "other.com" !== "example.com". Dropped!
@@ -61,14 +61,14 @@ describe("Parser Agent", () => {
 		expect(result2.links).not.toContain("https://yetanother.com/page");
 	});
 
-	test("should handle missing title gracefully", () => {
+	test("should handle missing title gracefully", async () => {
 		const html = `<html><body><p>No title</p></body></html>`;
-		const result = parser.parse("https://example.com", html);
+		const result = await parser.parse("https://example.com", html);
 		expect(result.title).toBe("");
 		expect(result.links.length).toBe(0);
 	});
 
-	test("should detect and drop spider traps (path repetition)", () => {
+	test("should detect and drop spider traps (path repetition)", async () => {
 		const html = `
       <html>
         <body>
@@ -78,7 +78,7 @@ describe("Parser Agent", () => {
       </html>
     `;
 		const baseUrl = "https://example.com/";
-		const result = parser.parse(baseUrl, html);
+		const result = await parser.parse(baseUrl, html);
 
 		expect(result.links).not.toContain(
 			"https://example.com/calendar/2026/01/01/calendar/2026/01/01",
@@ -86,11 +86,7 @@ describe("Parser Agent", () => {
 		expect(result.links).toContain("https://example.com/normal/page");
 	});
 
-	test("should check url depth limits", () => {
-		// MAX_DEPTH is 5
-		// If a url has more than 5 path segments, it might be considered too deep.
-		// Or depth tracking could be the queue depth?
-		// "URL depth limits and Path-repetition detection algorithm"
+	test("should check url depth limits", async () => {
 		const html = `
       <html>
         <body>
@@ -100,13 +96,13 @@ describe("Parser Agent", () => {
       </html>
     `;
 		const baseUrl = "https://example.com/";
-		const result = parser.parse(baseUrl, html);
+		const result = await parser.parse(baseUrl, html);
 
 		expect(result.links).not.toContain("https://example.com/1/2/3/4/5/6");
 		expect(result.links).toContain("https://example.com/1/2/3");
 	});
 
-	test("should extract text for deduplication fingerprinting", () => {
+	test("should extract text for deduplication fingerprinting", async () => {
 		const html = `
       <html>
         <head><title>Title</title></head>
@@ -119,9 +115,53 @@ describe("Parser Agent", () => {
       </html>
     `;
 		const baseUrl = "https://example.com/";
-		const result = parser.parse(baseUrl, html);
+		const result = await parser.parse(baseUrl, html);
 
-		// "Heading Some paragraph text."
 		expect(result.text).toBe("Heading Some paragraph text.");
+	});
+
+	test("should support extensibility layer with custom plugins", async () => {
+		const pluginParser = new ParserAgent();
+
+		let indexCalled = false;
+		let indexedData: any = null;
+
+		const imageExtractorPlugin: ParserPlugin = {
+			name: "imageExtractor",
+			extract: (_url, _html, $) => {
+				const images: string[] = [];
+				$("img").each((_, el) => {
+					const src = $(el).attr("src");
+					if (src) images.push(src);
+				});
+				return { count: images.length, images };
+			},
+			index: (result) => {
+				indexCalled = true;
+				indexedData = result;
+			},
+		};
+
+		pluginParser.registerPlugin(imageExtractorPlugin);
+
+		const html = `
+      <html>
+        <head><title>Plugin Test</title></head>
+        <body>
+          <img src="pic1.png" />
+          <img src="pic2.jpg" />
+        </body>
+      </html>
+    `;
+		const baseUrl = "https://example.com/";
+		const result = await pluginParser.parse(baseUrl, html);
+
+		const extractedData = result.extractedData as any;
+		expect(extractedData?.imageExtractor).toBeDefined();
+		expect(extractedData?.imageExtractor.count).toBe(2);
+		expect(extractedData?.imageExtractor.images).toContain("pic1.png");
+
+		expect(indexCalled).toBe(true);
+		expect(indexedData.title).toBe("Plugin Test");
 	});
 });

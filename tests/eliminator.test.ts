@@ -22,7 +22,8 @@ describe("Duplicate Eliminator", () => {
 	});
 
 	test("should identify exact identical content", () => {
-		const text = "This is a standard text that should be deduplicated properly.";
+		const text =
+			"This is a standard text that should be deduplicated properly.";
 		expect(eliminator.isDuplicateContent(text)).toBe(false);
 		expect(eliminator.isDuplicateContent(text)).toBe(true);
 	});
@@ -48,8 +49,10 @@ describe("Duplicate Eliminator", () => {
 	});
 
 	test("should not consider distinct texts as duplicates", () => {
-		const textA = "Welcome to Facebook. Connect with friends, family and other people you know. Share photos and videos, send messages and get updates.";
-		const textB = "Welcome to Google. Search the world's information, including webpages, images, videos and more.";
+		const textA =
+			"Welcome to Facebook. Connect with friends, family and other people you know. Share photos and videos, send messages and get updates.";
+		const textB =
+			"Welcome to Google. Search the world's information, including webpages, images, videos and more.";
 
 		expect(eliminator.isDuplicateContent(textA)).toBe(false);
 		expect(eliminator.isDuplicateContent(textB)).toBe(false);
@@ -59,11 +62,17 @@ describe("Duplicate Eliminator", () => {
 		// Create a new eliminator to reset recentHashes
 		const testEliminator = new DuplicateEliminator(1024, 2);
 		// Assuming maxRecentHashes is 10000 in the actual class.
-		// We'll test with a smaller batch just to see that it processes correctly 
+		// We'll test with a smaller batch just to see that it processes correctly
 		// and doesn't crash or run out of memory.
-		for(let i=0; i < 50; i++) {
-			testEliminator.isDuplicateContent(`Random text item number ${i} to fill the hash table`);
+		for (let i = 0; i < 50; i++) {
+			testEliminator.isDuplicateContent(
+				`Random text item number ${i} to fill the hash table`,
+			);
 		}
-		expect(testEliminator.isDuplicateContent("Random text item number 25 to fill the hash table")).toBe(true);
+		expect(
+			testEliminator.isDuplicateContent(
+				"Random text item number 25 to fill the hash table",
+			),
+		).toBe(true);
 	});
 });

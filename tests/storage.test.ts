@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { MongoClient } from "mongodb";
 import { StorageService } from "../src/services/storage";
 import { compressData } from "../src/utils/storage-optimizer";
 
@@ -10,11 +9,11 @@ mock.module("mongodb", () => {
 			async connect() {
 				return this;
 			}
-			db(name: string) {
+			db(_name: string) {
 				return {
-					collection(name: string) {
+					collection(_name: string) {
 						return {
-							insertOne: async (doc: any) => ({ insertedId: "mockId" }),
+							insertOne: async (_doc: any) => ({ insertedId: "mockId" }),
 							findOne: async (query: any) => {
 								if (query.url === "http://example.com/brotli") {
 									return {
@@ -62,10 +61,11 @@ describe("Storage Service", () => {
 		expect(html).toBe("<html><body>test</body></html>");
 	});
 
-	test("should store parsed metadata", async () => {
+	test("should store parsed metadata including extractedData", async () => {
 		const result = await storage.saveParsedData("http://example.com", {
 			title: "Test",
 			links: [],
+			extractedData: { testPlugin: { data: "value" } },
 		});
 		expect(result.insertedId).toBeDefined();
 	});

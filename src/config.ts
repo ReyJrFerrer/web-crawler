@@ -18,4 +18,9 @@ export const config = {
 		| "gzip"
 		| "none",
 	proxyListUrl: process.env.PROXY_LIST_URL || "",
+
+	// Indexer / Extensibility Layer Config
+	elasticsearchNode: process.env.ELASTICSEARCH_NODE || "",
+	elasticsearchIndex: process.env.ELASTICSEARCH_INDEX || "crawler-data",
+	elasticsearchApiKey: process.env.ELASTICSEARCH_API_KEY || "",
 };

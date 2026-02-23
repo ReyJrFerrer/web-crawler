@@ -2,15 +2,58 @@ import * as cheerio from "cheerio";
 import { config } from "../config";
 
 export interface ParsedResult {
+	url: string;
 	title: string;
 	links: string[];
 	text: string;
+	extractedData?: Record<string, unknown>;
+}
+
+export interface ParserPlugin {
+	name: string;
+	extract?(
+		url: string,
+		html: string,
+		$: cheerio.CheerioAPI,
+	):
+		| Record<string, unknown>
+		| Promise<Record<string, unknown> | undefined>
+		| undefined;
+	index?(result: ParsedResult): Promise<void> | void;
 }
 
 export class ParserAgent {
-	parse(baseUrl: string, html: string, originalDomain?: string): ParsedResult {
+	private plugins: ParserPlugin[] = [];
+
+	registerPlugin(plugin: ParserPlugin) {
+		this.plugins.push(plugin);
+	}
+
+	async parse(
+		baseUrl: string,
+		html: string,
+		originalDomain?: string,
+	): Promise<ParsedResult> {
 		const $ = cheerio.load(html);
 		const title = $("title").text().trim() || "";
+
+		const extractedData: Record<string, unknown> = {};
+		for (const plugin of this.plugins) {
+			if (plugin.extract) {
+				try {
+					const data = await plugin.extract(baseUrl, html, $);
+					if (data) {
+						extractedData[plugin.name] = data;
+					}
+				} catch (err) {
+					console.error(
+						`[ParserAgent] Plugin ${plugin.name} extract error:`,
+						err,
+					);
+				}
+			}
+		}
+
 		// Extract raw text for deduplication fingerprinting (SimHash)
 		$("script, style, noscript, iframe").remove();
 		const text = $("body").text().replace(/\s+/g, " ").trim();
@@ -21,7 +64,7 @@ export class ParserAgent {
 			baseHostname = new URL(baseUrl).hostname;
 		} catch (_e) {
 			// invalid base url
-			return { title, links: [], text: "" };
+			return { url: baseUrl, title, links: [], text: "", extractedData };
 		}
 		const effectiveOriginalDomain = originalDomain || baseHostname;
 		const isExternalPage = baseHostname !== effectiveOriginalDomain;
@@ -65,10 +108,28 @@ export class ParserAgent {
 			}
 		});
 
-		return {
+		const result: ParsedResult = {
+			url: baseUrl,
 			title,
 			links: Array.from(links),
 			text,
+			extractedData,
 		};
+
+		// Run indexers
+		for (const plugin of this.plugins) {
+			if (plugin.index) {
+				try {
+					await plugin.index(result);
+				} catch (err) {
+					console.error(
+						`[ParserAgent] Plugin ${plugin.name} index error:`,
+						err,
+					);
+				}
+			}
+		}
+
+		return result;
 	}
 }

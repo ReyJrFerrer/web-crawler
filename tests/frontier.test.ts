@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import Queue from "bull";
 import { Frontier } from "../src/services/frontier";
 
 mock.module("bull", () => {
@@ -23,7 +22,7 @@ mock.module("bull", () => {
 			async empty() {
 				return true;
 			}
-			async isPaused(isLocal: boolean) {
+			async isPaused(_isLocal: boolean) {
 				return false;
 			}
 			client = {

@@ -1,5 +1,14 @@
 Feb 23, 2026
 Developer: Reynaldo
+- Indexer Integration / Extensibility Layer:
+    - Fixed data pipeline bug to ensure `extractedData` from plugins is successfully passed through `FetcherAgent` and persisted to MongoDB via `StorageService`.
+    - Refactored `ParserAgent` to support a pluggable architecture with `ParserPlugin` interface.
+    - Updated `parse` method to run asynchronously to support promise-based plugins.
+    - Created `extract` and `index` lifecycle hooks for plugins to seamlessly process and index data.
+    - Added production-ready plugins in `src/plugins/index.ts`: `MetadataExtractorPlugin` for robust SEO/OG metadata extraction and `ElasticsearchIndexerPlugin` for real-time document indexing to Elasticsearch via API.
+    - Updated `FetcherAgent` and test suites to accommodate the new asynchronous parser.
+    - Exported and wired configuration environment variables for Elasticsearch (`ELASTICSEARCH_NODE`, `ELASTICSEARCH_INDEX`, `ELASTICSEARCH_API_KEY`) into the crawler orchestration flow.
+
 - Fault Tolerance Manager:
     - Leveraged Bull's native stalled jobs un-ack mechanism for crash recovery by ensuring appropriate `lockDuration` and `maxStalledCount` are configured.
     - Implemented Dead-Letter Queue (DLQ) behavior by preserving jobs in the failed set (`removeOnFail: false`) and explicitly logging when jobs fail completely.
