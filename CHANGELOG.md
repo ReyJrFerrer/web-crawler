@@ -1,5 +1,13 @@
 Feb 23, 2026
 Developer: Reynaldo
+- Fault Tolerance Manager:
+    - Leveraged Bull's native stalled jobs un-ack mechanism for crash recovery by ensuring appropriate `lockDuration` and `maxStalledCount` are configured.
+    - Implemented Dead-Letter Queue (DLQ) behavior by preserving jobs in the failed set (`removeOnFail: false`) and explicitly logging when jobs fail completely.
+    - Modified `FetcherAgent` to correctly throw errors on HTTP 403, 429, and 503 instead of manually requeueing, allowing Bull's exponential backoff retry mechanism to take effect.
+    - Integrated 403 Forbidden responses into the proxy rotation and ban system to mitigate WAF blocks.
+    - Added comprehensive tests for Dead Letter Queue retry flow and proxy rotation on 403/429 responses.
+    - Resolved React accessibility (a11y) linting issues in `WorkerCard` and `WorkerDetailModal` components for the dashboard.
+
 - Storage Optimizer & Object Storage Adapter:
     - Added `StorageOptimizer` utility to support Brotli and Gzip compression of raw HTML data.
     - Added `COMPRESSION_ALGO` environment variable configuration (defaults to `brotli`).

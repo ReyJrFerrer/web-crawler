@@ -29,9 +29,10 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
 
 	return (
 		<div className="group relative">
-			<div
+			<button
+				type="button"
 				onClick={onClick}
-				className="bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10 transition-all duration-200"
+				className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10 transition-all duration-200 block"
 			>
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center gap-3">
@@ -112,7 +113,7 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
 						</div>
 					</div>
 				)}
-			</div>
+			</button>
 		</div>
 	);
 }

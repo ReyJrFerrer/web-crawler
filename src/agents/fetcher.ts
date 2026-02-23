@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from "axios";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import { config } from "../config";
 import type { Frontier } from "../services/frontier";
 import type { StorageService } from "../services/storage";
@@ -100,12 +100,13 @@ export class FetcherAgent {
 			}
 
 			const startTime = Date.now();
-			let response: any;
+			let response: AxiosResponse;
 			try {
 				response = await axios.get(url, axiosConfig);
-			} catch (err: any) {
+			} catch (err: unknown) {
+				const errorMsg = err instanceof Error ? err.message : String(err);
 				// Network error (timeout, connection refused, etc.)
-				console.error(`[Fetcher] Network error fetching ${url}:`, err.message);
+				console.error(`[Fetcher] Network error fetching ${url}:`, errorMsg);
 				if (proxyConfig) {
 					proxyManager.reportFailure(proxyConfig);
 				}
@@ -127,15 +128,18 @@ export class FetcherAgent {
 				responseTime,
 			);
 
-			if (response.status === 429 || response.status === 503) {
+			if (
+				response.status === 429 ||
+				response.status === 503 ||
+				response.status === 403
+			) {
 				console.warn(
-					`[Fetcher] Received ${response.status} from ${url}. Requeuing for retry.`,
+					`[Fetcher] Received ${response.status} from ${url}. Returning false to trigger Bull retry with exponential backoff.`,
 				);
 				if (proxyConfig) {
 					proxyManager.reportFailure(proxyConfig);
 				}
-				await this.frontier.addUrl(url, depth, originalDomain);
-				return true; // Return true to complete current job and let requeued job handle it
+				return false;
 			}
 
 			if (response.status !== 200 || !response.data) {
@@ -251,12 +255,17 @@ export class FetcherAgent {
 
 		queue.on("error", (error) => {
 			if (error.message?.includes("Missing key for job")) {
-				// Suppress harmless "Missing key for job" errors.
-				// These are expected if the user clears the Redis queue or hits "Stop"
-				// from the dashboard while fetchers are still actively processing a job.
 				return;
 			}
 			console.error("[Fetcher] Queue encountered an error:", error);
+		});
+
+		queue.on("failed", (job, error) => {
+			if (job.attemptsMade >= (job.opts.attempts || 3)) {
+				console.warn(
+					`[Fetcher] Job ${job.id} for ${job.data.url} failed completely and moved to Dead-Letter Queue. Error: ${error.message}`,
+				);
+			}
 		});
 
 		let partitionsToProcess: number[] = [];

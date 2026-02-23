@@ -48,6 +48,7 @@ export function WorkerDetailModal({
 						</span>
 					</div>
 					<button
+						type="button"
 						onClick={onClose}
 						className="text-gray-400 hover:text-white transition-colors text-2xl leading-none"
 					>

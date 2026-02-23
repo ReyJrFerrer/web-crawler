@@ -95,7 +95,7 @@ export class ProxyManager {
 							failures: existing ? existing.failures : 0,
 							bannedUntil: existing ? existing.bannedUntil : 0,
 						});
-					} catch (e) {
+					} catch (_e) {
 						// ignore invalid lines
 					}
 				}

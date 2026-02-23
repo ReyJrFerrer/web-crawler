@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 import { FetcherAgent } from "../src/agents/fetcher";
 import { config } from "../src/config";
+import { proxyManager } from "../src/utils/proxy-manager";
 
 mock.module("axios", () => {
 	return {
@@ -10,6 +11,18 @@ mock.module("axios", () => {
 					return {
 						data: '<html><head></head><body><div id="root"></div><script>load()</script></body></html>',
 						status: 200,
+					};
+				}
+				if (url === "http://forbidden.com") {
+					return {
+						status: 403,
+						data: "Forbidden",
+					};
+				}
+				if (url === "http://too-many-requests.com") {
+					return {
+						status: 429,
+						data: "Too Many Requests",
 					};
 				}
 				return {
@@ -99,5 +112,38 @@ describe("Fetcher Agent with full pipeline", () => {
 	test("should detect and render SPA URLs", async () => {
 		const success = await fetcher.fetchAndProcess("http://spa.com", 0);
 		expect(success).toBe(true);
+	});
+
+	test("should return false on 403 to trigger Dead Letter Queue retry flow and report proxy failure", async () => {
+		config.proxyListUrl = "http://mock";
+		proxyManager._setProxies([
+			{
+				protocol: "http",
+				host: "1.2.3.4",
+				port: 8080,
+				failures: 0,
+				bannedUntil: 0,
+			},
+		]);
+
+		const proxyBefore = await proxyManager.getProxy();
+		expect(proxyBefore?.failures).toBe(0);
+
+		const success = await fetcher.fetchAndProcess("http://forbidden.com", 0);
+		expect(success).toBe(false);
+
+		const proxyAfter = await proxyManager.getProxy();
+		expect(proxyAfter?.failures).toBe(1);
+
+		proxyManager._setProxies([]);
+		config.proxyListUrl = "";
+	});
+
+	test("should return false on 429 to trigger Dead Letter Queue retry flow", async () => {
+		const success = await fetcher.fetchAndProcess(
+			"http://too-many-requests.com",
+			0,
+		);
+		expect(success).toBe(false);
 	});
 });
