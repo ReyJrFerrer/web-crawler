@@ -37,6 +37,12 @@ class MockFrontier {
 	getQueue() {
 		return { process: () => {} };
 	}
+	async isStopped() {
+		return false;
+	}
+	async isPaused() {
+		return false;
+	}
 }
 
 class MockParser {

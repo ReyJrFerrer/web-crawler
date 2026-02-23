@@ -14,6 +14,28 @@ mock.module("bull", () => {
 				const data = typeof args[0] === "string" ? args[1] : args[0];
 				return { name, data };
 			}
+			async pause(isLocal: boolean, doNotWaitActive: boolean) {
+				return { isLocal, doNotWaitActive };
+			}
+			async resume(isLocal: boolean) {
+				return { isLocal };
+			}
+			async empty() {
+				return true;
+			}
+			async isPaused(isLocal: boolean) {
+				return false;
+			}
+			client = {
+				get: async (key: string) => this._store[key],
+				set: async (key: string, val: string) => {
+					this._store[key] = val;
+				},
+				del: async (key: string) => {
+					delete this._store[key];
+				},
+			};
+			_store: Record<string, string> = {};
 			async close() {
 				return true;
 			}
@@ -56,5 +78,25 @@ describe("Frontier Service", () => {
 		const job2 = await frontier.addUrl("http://test.com/something", 0);
 
 		expect(job1?.name).toBe(job2?.name); // Because job1 was forced to use 'test.com'
+	});
+
+	test("should properly call pause on the queue with doNotWaitActive = true", async () => {
+		const result = await frontier.pause(false);
+		expect(result).toEqual({ isLocal: false, doNotWaitActive: true } as any);
+	});
+
+	test("should properly call empty on the queue", async () => {
+		const result = await frontier.empty();
+		expect(result).toBe(true as any);
+	});
+
+	test("should properly call stop on the queue and set isStopped to true", async () => {
+		await frontier.stop();
+		expect(await frontier.isStopped()).toBe(true);
+	});
+
+	test("should properly call resume on the queue and set isStopped to false", async () => {
+		await frontier.resume(false);
+		expect(await frontier.isStopped()).toBe(false);
 	});
 });

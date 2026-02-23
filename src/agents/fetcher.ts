@@ -49,6 +49,18 @@ export class FetcherAgent {
 		originalDomain?: string,
 	): Promise<boolean> {
 		try {
+			if (await this.frontier.isStopped()) {
+				console.log(`[Fetcher] Queue is stopped. Aborting fetch for ${url}`);
+				return true; // Complete the job so it leaves the active list, do not requeue
+			}
+			if (await this.frontier.isPaused()) {
+				console.log(
+					`[Fetcher] Queue is paused. Re-queuing ${url} and aborting active fetch.`,
+				);
+				await this.frontier.addUrl(url, depth, originalDomain);
+				return true; // Complete the current active job since we re-queued it
+			}
+
 			if (depth > config.maxDepth) {
 				console.log(`[Fetcher] Max depth reached for ${url}`);
 				return true;
@@ -130,7 +142,7 @@ export class FetcherAgent {
 			);
 
 			// Queue new links
-			if (depth < config.maxDepth) {
+			if (depth < config.maxDepth && !(await this.frontier.isStopped())) {
 				let addedCount = 0;
 				let defaultDomain = originalDomain;
 				if (!defaultDomain) {

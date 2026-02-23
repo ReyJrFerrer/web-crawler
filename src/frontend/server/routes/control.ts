@@ -74,9 +74,7 @@ router.post("/resume", async (_req, res) => {
 // POST /api/queue/stop
 router.post("/stop", async (_req, res) => {
 	try {
-		// Stop means pause and empty the queue
-		await getFrontier().pause(false);
-		await getFrontier().empty();
+		await getFrontier().stop();
 		res.json({ success: true, status: "stopped" });
 	} catch (err) {
 		console.error("[control] stop error:", err);

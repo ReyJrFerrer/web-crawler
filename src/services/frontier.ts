@@ -69,11 +69,13 @@ export class Frontier {
 
 	async pause(isLocal = false) {
 		console.log(`[Frontier] Pausing queue (local: ${isLocal})...`);
-		return this.queue.pause(isLocal);
+		return this.queue.pause(isLocal, true);
 	}
 
 	async resume(isLocal = false) {
 		console.log(`[Frontier] Resuming queue (local: ${isLocal})...`);
+		// Use the underlying Redis client to clear the stopped flag
+		await this.queue.client.del("crawler:stopped");
 		return this.queue.resume(isLocal);
 	}
 
@@ -86,6 +88,19 @@ export class Frontier {
 
 	async isPaused(isLocal = false) {
 		return this.queue.isPaused(isLocal);
+	}
+
+	async isStopped() {
+		// Use the underlying Redis client to check the stopped flag
+		const val = await this.queue.client.get("crawler:stopped");
+		return val === "true";
+	}
+
+	async stop() {
+		console.log("[Frontier] Stopping and emptying queue...");
+		await this.queue.client.set("crawler:stopped", "true");
+		await this.pause(false);
+		await this.empty();
 	}
 
 	async close() {
