@@ -39,11 +39,8 @@ export class ParserAgent {
 					// Domain Restriction Filter
 					if (config.domainFilter) {
 						if (isExternalPage && urlObj.hostname !== effectiveOriginalDomain) {
-							// If we are on an external page (e.g. youtube.com embedded link),
-							// restrict fetching unrelated contents (e.g. other youtube.com links)
 							return;
 						}
-						// If we are NOT on an external page, we allow all links (so we can scrape embedded external links)
 					}
 
 					// Spider Trap Protector: URL depth limits

@@ -1,10 +1,6 @@
 import http from "node:http";
 import https from "node:https";
 
-// We wrap the import of cacheable-lookup in a try-catch and only use it
-// if the current JS runtime supports intercepting http.Agent.createConnection
-// (Bun doesn't support this internally yet, but Node does).
-
 export const httpAgent = new http.Agent({ keepAlive: true });
 export const httpsAgent = new https.Agent({ keepAlive: true });
 

@@ -40,6 +40,7 @@ export class StorageService {
 		this.parsedCollection = this.db.collection("parsedData");
 
 		// Optional: Create indexes
+		// TO CHECK
 		// await this.rawCollection.createIndex({ url: 1 }, { unique: true });
 		// await this.parsedCollection.createIndex({ url: 1 }, { unique: true });
 	}
