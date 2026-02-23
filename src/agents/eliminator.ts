@@ -58,10 +58,8 @@ export class DuplicateEliminator {
 
 	isNew(url: string): boolean {
 		if (this.filter.test(url)) {
-			// Possible duplicate
 			return false;
 		}
-		// Definitely new
 		this.filter.add(url);
 		return true;
 	}

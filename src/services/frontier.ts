@@ -52,7 +52,7 @@ export class Frontier {
 			jobName,
 			{ url, depth, originalDomain: domain },
 			{
-				attempts: 3, // Retry up to 3 times
+				attempts: 3,
 				backoff: {
 					type: "exponential",
 					delay: 2000, // 2s -> 4s -> 8s
