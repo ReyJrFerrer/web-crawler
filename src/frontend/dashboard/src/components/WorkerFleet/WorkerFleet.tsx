@@ -24,8 +24,7 @@ export function WorkerFleet() {
 				</p>
 			</div>
 
-			{/* Top stat cards */}
-			<div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 				<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
 					<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">
 						Workers Online
@@ -39,35 +38,44 @@ export function WorkerFleet() {
 				</div>
 				<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
 					<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">
-						Current RAM
+						Workers Total
 					</p>
 					<p className="text-4xl font-bold text-brand-500">
-						{data.metrics[data.metrics.length - 1]?.ram_mb ?? 0}
-						<span className="text-base font-normal text-gray-400 ml-1">MB</span>
+						{data.workers?.length ?? 0}
 					</p>
-					<p className="text-xs text-gray-500 mt-1">RSS memory usage</p>
+					<p className="text-xs text-gray-500 mt-1">Registered workers</p>
 				</div>
 				<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
 					<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">
 						DNS Cache Entries
 					</p>
 					<p className="text-4xl font-bold text-purple-400">
-						{data.dnsCacheEntries.toLocaleString()}
+						{data.dnsCacheEntries?.toLocaleString() ?? 0}
 					</p>
 					<p className="text-xs text-gray-500 mt-1">
 						Domain resolutions cached
 					</p>
 				</div>
+				<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+					<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">
+						Total Pages Fetched
+					</p>
+					<p className="text-4xl font-bold text-yellow-400">
+						{(data.workers || [])
+							.reduce((sum, w) => sum + w.pagesFetched, 0)
+							.toLocaleString()}
+					</p>
+					<p className="text-xs text-gray-500 mt-1">Across all workers</p>
+				</div>
 			</div>
 
-			{/* RAM chart */}
 			<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
 				<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
-					RAM Usage (MB) — Last {data.metrics.length} samples
+					RAM Usage (MB) — Last {data.metrics?.length ?? 0} samples
 				</p>
 				<ResponsiveContainer width="100%" height={220}>
 					<LineChart
-						data={data.metrics}
+						data={data.metrics || []}
 						margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
 					>
 						<CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
@@ -106,14 +114,13 @@ export function WorkerFleet() {
 				</ResponsiveContainer>
 			</div>
 
-			{/* CPU chart */}
 			<div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
 				<p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
-					CPU Load (%) — Last {data.metrics.length} samples
+					CPU Load (%) — Last {data.metrics?.length ?? 0} samples
 				</p>
 				<ResponsiveContainer width="100%" height={220}>
 					<LineChart
-						data={data.metrics}
+						data={data.metrics || []}
 						margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
 					>
 						<CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />

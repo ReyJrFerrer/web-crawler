@@ -36,8 +36,20 @@ export interface MetricPoint {
 	cpu_percent: number;
 }
 
+export interface WorkerInfo {
+	id: string;
+	name: string;
+	status: "online" | "offline" | "busy" | "idle";
+	urlsDiscovered: number;
+	pagesFetched: number;
+	queueBreakdown: QueueCounts;
+	assignedDomains: string[];
+	lastActive: string;
+}
+
 export interface WorkerHealth {
 	workersOnline: number;
+	workers: WorkerInfo[];
 	metrics: MetricPoint[];
 	dnsCacheEntries: number;
 }
