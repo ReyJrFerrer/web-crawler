@@ -21,6 +21,13 @@ Developer: Reynaldo
     - Fixed UI state in `GlobalStatus.tsx` so users can resume the queue after it has been stopped.
     - Added comprehensive unit tests for `pause`, `stop`, `resume`, and `empty` in `tests/frontier.test.ts`.
 
+- Dynamic Politeness & Egress Manager:
+    - Implemented dynamic exponential backoff in `rate-limiter` to adjust crawl delays based on server responses (429/503).
+    - Created `ProxyManager` with proxy rotation, failure tracking, and temporary banning.
+    - Integrated proxy rotation and status code reporting directly into `FetcherAgent`.
+    - Added graceful requeuing logic for rate-limited URLs to prevent data loss.
+    - Added unit tests for proxy management and dynamic rate limiting.
+
 Feb 21, 2026
 Developer: Reynaldo 
 - Advanced Processing & Scale Foundation:

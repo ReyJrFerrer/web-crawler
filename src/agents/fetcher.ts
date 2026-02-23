@@ -1,9 +1,13 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 import { config } from "../config";
 import type { Frontier } from "../services/frontier";
 import type { StorageService } from "../services/storage";
 import { httpAgent, httpsAgent } from "../utils/dns-cache";
-import { enforcePerDomainRateLimit } from "../utils/rate-limiter";
+import { proxyManager } from "../utils/proxy-manager";
+import {
+	enforcePerDomainRateLimit,
+	updateDynamicDelay,
+} from "../utils/rate-limiter";
 import { isAllowedByRobots } from "../utils/robots";
 import type { DuplicateEliminator } from "./eliminator";
 import type { ParserAgent } from "./parser";
@@ -77,19 +81,75 @@ export class FetcherAgent {
 			await enforcePerDomainRateLimit(url, config.crawlDelayMs);
 			console.log(`[Fetcher] Fetching URL: ${url} (Depth: ${depth})`);
 
-			// 3. Download HTML (using cacheable-lookup DNS Cache)
-			const response = await axios.get(url, {
+			// 3. Download HTML (using cacheable-lookup DNS Cache and optional proxy)
+			const proxyConfig = await proxyManager.getProxy();
+			const axiosConfig: AxiosRequestConfig = {
 				headers: { "User-Agent": config.userAgent },
 				timeout: 10000,
 				httpAgent,
 				httpsAgent,
-			});
+				validateStatus: () => true, // Don't throw on non-200 status codes so we can handle them
+			};
+
+			if (proxyConfig) {
+				axiosConfig.proxy = {
+					protocol: proxyConfig.protocol,
+					host: proxyConfig.host,
+					port: proxyConfig.port,
+				};
+			}
+
+			const startTime = Date.now();
+			let response: any;
+			try {
+				response = await axios.get(url, axiosConfig);
+			} catch (err: any) {
+				// Network error (timeout, connection refused, etc.)
+				console.error(`[Fetcher] Network error fetching ${url}:`, err.message);
+				if (proxyConfig) {
+					proxyManager.reportFailure(proxyConfig);
+				}
+				// We still update dynamic delay based on network error if needed
+				updateDynamicDelay(
+					url,
+					config.crawlDelayMs,
+					500,
+					Date.now() - startTime,
+				);
+				return false;
+			}
+
+			const responseTime = Date.now() - startTime;
+			updateDynamicDelay(
+				url,
+				config.crawlDelayMs,
+				response.status,
+				responseTime,
+			);
+
+			if (response.status === 429 || response.status === 503) {
+				console.warn(
+					`[Fetcher] Received ${response.status} from ${url}. Requeuing for retry.`,
+				);
+				if (proxyConfig) {
+					proxyManager.reportFailure(proxyConfig);
+				}
+				await this.frontier.addUrl(url, depth, originalDomain);
+				return true; // Return true to complete current job and let requeued job handle it
+			}
 
 			if (response.status !== 200 || !response.data) {
 				console.error(
 					`[Fetcher] Failed to fetch ${url}, status: ${response.status}`,
 				);
+				if (proxyConfig && response.status >= 500) {
+					proxyManager.reportFailure(proxyConfig);
+				}
 				return false;
+			}
+
+			if (proxyConfig) {
+				proxyManager.reportSuccess(proxyConfig);
 			}
 
 			let html =

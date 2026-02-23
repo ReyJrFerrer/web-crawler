@@ -17,4 +17,5 @@ export const config = {
 		| "brotli"
 		| "gzip"
 		| "none",
+	proxyListUrl: process.env.PROXY_LIST_URL || "",
 };
