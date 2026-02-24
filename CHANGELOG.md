@@ -1,5 +1,23 @@
 Feb 24, 2026
 Developer: Opencode
+- Infrastructure & Scaling Setup (Day 3):
+    - Added Dockerfile to containerize the fetcher agent using Bun and Puppeteer.
+    - Created Kubernetes manifests for local testing (`k8s/local/`) using Docker Desktop, configured to connect to `host.docker.internal` services.
+    - Built a Node/Bun CLI tool (`src/cli/scale.ts`) utilizing `@kubernetes/client-node` to interact with the Kubernetes API for dynamic horizontal scaling of fetcher replicas.
+    - Added `scale` script to `package.json` for easy scaling commands (`bun run scale`).
+    - Designed Production DOKS Strategy (`k8s/doks/`), splitting the application into a `crawler-fetcher` worker deployment and a `crawler-api` backend service.
+    - Added `DISABLE_DASHBOARD` environment variable toggle in `src/index.ts` to cleanly decouple workers from the BFF API when running in scalable clusters.
+    - Documented deployment architectures, best practices, and instructions in `k8s/README.md`.
+
+- Object Storage Lifecycle Optimization:
+    - Added `src/scripts/s3-lifecycle.json` to define AWS S3 / DigitalOcean Spaces 30-day lifecycle rule.
+    - Detailed warning logs inside `S3ObjectStorageAdapter` providing the exact AWS CLI command needed to configure lifecycle policy via `aws s3api put-bucket-lifecycle-configuration`.
+    - Added `src/scripts/cleanup.ts` fallback manual script to delete expired object storage and MongoDB documents.
+    - `config.s3RetentionDays` to dynamically alter the expiration days (defaults to 30).
+    - All stored object keys in S3 are now prefixed with `raw-html/` instead of being placed at the root of the bucket. This allows the lifecycle rule to target only crawler files and avoid deleting everything in a shared bucket.
+    - Updated `tsconfig.json` adding DOM lib definitions for Vite dashboard compilation.
+    - Fixed TypeScript definition error in `eliminator.ts` using strict non-null assertion best practices.
+
 - Decompression CLI Tool:
     - Added a new CLI service `DecompressorService` alongside the frontier to fetch and decompress HTML files from Object Storage or MongoDB fallback.
     - Updated `StorageService` with a `getMetadataList` method to retrieve available documents and their metadata.

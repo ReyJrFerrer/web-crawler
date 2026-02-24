@@ -77,7 +77,9 @@ async function main() {
 	fetcher.startListening();
 
 	// Start Dashboard UI
-	startDashboard();
+	if (process.env.DISABLE_DASHBOARD !== "true") {
+		startDashboard();
+	}
 
 	console.log("[Orchestrator] System running and waiting for seeds.");
 

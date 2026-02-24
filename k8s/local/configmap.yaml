@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crawler-config
+data:
+  # Using host.docker.internal to connect to Redis/Mongo running via docker-compose locally
+  REDIS_URL: "redis://host.docker.internal:6379"
+  MONGO_URL: "mongodb://host.docker.internal:27017/crawler"
+  FETCHER_CONCURRENCY: "10"
+  CRAWL_DELAY_MS: "2000"
+  MAX_DEPTH: "5"
+  USE_RENDERER: "true"
+  SIMHASH_THRESHOLD: "3"
+  COMPRESSION_ALGO: "brotli"
+  # Optional DigitalOcean Spaces config
+  # S3_BUCKET_NAME: "crawler-raw-html"
+  # S3_REGION: "nyc3"
+  # S3_RETENTION_DAYS: "30"

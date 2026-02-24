@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawler-fetcher
+  labels:
+    app: crawler-fetcher
+spec:
+  replicas: 3 # Start with 3 in production
+  selector:
+    matchLabels:
+      app: crawler-fetcher
+  template:
+    metadata:
+      labels:
+        app: crawler-fetcher
+    spec:
+      containers:
+      - name: fetcher
+        # Replace with your actual DigitalOcean Container Registry image path
+        image: registry.digitalocean.com/your-registry/web-crawler:latest
+        imagePullPolicy: Always
+        command: ["bun", "run", "start"]
+        env:
+          - name: DISABLE_DASHBOARD
+            value: "true"
+        envFrom:
+        - configMapRef:
+            name: crawler-config
+        - secretRef:
+            name: crawler-secrets
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"

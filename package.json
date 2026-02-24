@@ -11,6 +11,7 @@
 		"test": "bun test",
 		"decompress": "bun run src/services/decompressor.ts",
 		"seed": "bun run src/seed.ts",
+		"scale": "bun build src/cli/scale.ts --target=node --outfile=.scale.js && node .scale.js && rm -f .scale.js",
 		"monitor": "bun run src/monitor.ts",
 		"lint": "biome check src",
 		"format": "biome format --write src"
@@ -29,6 +30,7 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.995.0",
+		"@kubernetes/client-node": "^1.4.0",
 		"@types/prompts": "^2.4.9",
 		"@types/puppeteer": "^7.0.4",
 		"axios": "^1.13.5",

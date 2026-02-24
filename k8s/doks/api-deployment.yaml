@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawler-api
+  labels:
+    app: crawler-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-api
+  template:
+    metadata:
+      labels:
+        app: crawler-api
+    spec:
+      containers:
+      - name: api
+        image: registry.digitalocean.com/your-registry/web-crawler:latest
+        imagePullPolicy: Always
+        # Only run the dashboard backend server
+        command: ["bun", "run", "server"]
+        envFrom:
+        - configMapRef:
+            name: crawler-config
+        - secretRef:
+            name: crawler-secrets
+        ports:
+        - containerPort: 4000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crawler-api-service
+spec:
+  type: LoadBalancer # Expose externally so frontend can connect
+  selector:
+    app: crawler-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4000
