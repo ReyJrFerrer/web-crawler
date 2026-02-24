@@ -142,6 +142,15 @@ export class StorageService {
 		});
 	}
 
+	async getMetadataList(limit = 100): Promise<RawHtmlDoc[]> {
+		if (!this.rawCollection) throw new Error("Database not connected");
+		return this.rawCollection
+			.find({}, { projection: { url: 1, s3Key: 1, crawledAt: 1, algo: 1 } })
+			.sort({ crawledAt: -1 })
+			.limit(limit)
+			.toArray() as Promise<RawHtmlDoc[]>;
+	}
+
 	async close() {
 		await this.client.close();
 	}

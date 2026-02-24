@@ -1,3 +1,13 @@
+Feb 24, 2026
+Developer: Opencode
+- Decompression CLI Tool:
+    - Added a new CLI service `DecompressorService` alongside the frontier to fetch and decompress HTML files from Object Storage or MongoDB fallback.
+    - Updated `StorageService` with a `getMetadataList` method to retrieve available documents and their metadata.
+    - Integrated `prompts` library for an interactive CLI experience to select stored HTML documents.
+    - Allowed users to specify the output path for the downloaded and decompressed HTML.
+    - Implemented comprehensive unit tests in `tests/decompressor.test.ts`.
+    - Added `decompress` script to `package.json` for easy execution (`bun run decompress`).
+
 Feb 23, 2026
 Developer: Reynaldo
 - Integrate DigitalOcean Spaces (S3 Object Storage):

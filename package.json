@@ -9,6 +9,7 @@
 		"dashboard": "bun run --cwd src/frontend/dashboard dev",
 		"dashboard:build": "bun run --cwd src/frontend/dashboard build",
 		"test": "bun test",
+		"decompress": "bun run src/services/decompressor.ts",
 		"seed": "bun run src/seed.ts",
 		"monitor": "bun run src/monitor.ts",
 		"lint": "biome check src",
@@ -28,6 +29,7 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.995.0",
+		"@types/prompts": "^2.4.9",
 		"@types/puppeteer": "^7.0.4",
 		"axios": "^1.13.5",
 		"bloomfilter": "^1.0.0",
@@ -38,6 +40,7 @@
 		"express": "^5.2.1",
 		"ioredis": "^5.9.3",
 		"mongodb": "^7.1.0",
+		"prompts": "^2.4.2",
 		"puppeteer": "^24.37.5",
 		"robots-parser": "^3.0.1"
 	}
