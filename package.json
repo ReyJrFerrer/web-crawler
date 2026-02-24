@@ -9,10 +9,8 @@
 		"dashboard": "bun run --cwd src/frontend/dashboard dev",
 		"dashboard:build": "bun run --cwd src/frontend/dashboard build",
 		"test": "bun test",
-		"decompress": "bun run src/services/decompressor.ts",
+		"cli": "bun run src/cli/index.ts",
 		"seed": "bun run src/seed.ts",
-		"scale": "bun build src/cli/scale.ts --target=node --outfile=.scale.js && node .scale.js && rm -f .scale.js",
-		"monitor": "bun run src/monitor.ts",
 		"lint": "biome check src",
 		"format": "biome format --write src"
 	},

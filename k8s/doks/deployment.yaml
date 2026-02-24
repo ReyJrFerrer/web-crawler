@@ -5,7 +5,7 @@ metadata:
   labels:
     app: crawler-fetcher
 spec:
-  replicas: 3 # Start with 3 in production
+  replicas: 3
   selector:
     matchLabels:
       app: crawler-fetcher
@@ -16,13 +16,18 @@ spec:
     spec:
       containers:
       - name: fetcher
-        # Replace with your actual DigitalOcean Container Registry image path
         image: registry.digitalocean.com/your-registry/web-crawler:latest
         imagePullPolicy: Always
         command: ["bun", "run", "start"]
         env:
           - name: DISABLE_DASHBOARD
             value: "true"
+          - name: ROLE
+            value: "fetcher"
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         envFrom:
         - configMapRef:
             name: crawler-config
@@ -30,8 +35,8 @@ spec:
             name: crawler-secrets
         resources:
           requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
             memory: "1Gi"
             cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"

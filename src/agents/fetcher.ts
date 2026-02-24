@@ -292,12 +292,12 @@ export class FetcherAgent {
 				if (!success) {
 					throw new Error(`Failed to process ${url}`);
 				}
-				return success;
+				return { success: true, url, podName: config.podName };
 			});
 		}
 
 		console.log(
-			`[Fetcher] Agent started listening to partitions [${partitionsToProcess.join(",")}] with concurrency ${config.fetcherConcurrency}`,
+			`[Fetcher] Agent started listening to partitions [${partitionsToProcess.join(",")}] with concurrency ${config.fetcherConcurrency} on pod ${config.podName}`,
 		);
 	}
 }

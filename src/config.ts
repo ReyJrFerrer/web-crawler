@@ -1,3 +1,5 @@
+import * as os from "node:os";
+
 export const config = {
 	redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
 	mongoUrl: process.env.MONGO_URL || "mongodb://localhost:27017/crawler",
@@ -13,6 +15,8 @@ export const config = {
 	simhashThreshold: parseInt(process.env.SIMHASH_THRESHOLD || "3", 10),
 	queuePartitions: parseInt(process.env.QUEUE_PARTITIONS || "10", 10),
 	workerPartitionIds: process.env.WORKER_PARTITION_IDS || "",
+	role: (process.env.ROLE || "orchestrator") as "orchestrator" | "fetcher",
+	podName: process.env.POD_NAME || os.hostname(),
 	compressionAlgo: (process.env.COMPRESSION_ALGO || "brotli") as
 		| "brotli"
 		| "gzip"

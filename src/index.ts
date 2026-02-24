@@ -27,72 +27,111 @@ async function main() {
 	const frontier = new Frontier();
 	console.log("[Orchestrator] Connected to URL Frontier (Redis)");
 
-	// Init Intelligence Layer Agents
-	const parser = new ParserAgent();
-
-	// Register production-ready plugins
-	parser.registerPlugin(new MetadataExtractorPlugin());
-	if (config.elasticsearchNode) {
-		parser.registerPlugin(
-			new ElasticsearchIndexerPlugin({
-				node: config.elasticsearchNode,
-				index: config.elasticsearchIndex,
-				apiKey: config.elasticsearchApiKey,
-			}),
-		);
+	// Branch logic based on ROLE
+	if (config.role === "fetcher") {
 		console.log(
-			`[Orchestrator] Registered Elasticsearch Indexer Plugin (${config.elasticsearchNode})`,
+			`[Fetcher Node] Running in dedicated fetcher mode on pod ${config.podName}`,
 		);
-	}
 
-	const eliminator = new DuplicateEliminator();
-	console.log("[Orchestrator] Initialized Parser and Duplicate Eliminator");
+		// Init Intelligence Layer Agents
+		const parser = new ParserAgent();
 
-	let renderer: RendererAgent | null = null;
-	if (config.useRenderer) {
-		try {
-			const r = new RendererAgent();
-			await r.init();
-			renderer = r;
-			console.log("[Orchestrator] Initialized Renderer Agent (Puppeteer)");
-		} catch (err) {
-			console.warn(
-				"[Orchestrator] Failed to initialize Renderer Agent — continuing without JavaScript rendering:",
-				(err as Error).message,
+		// Register production-ready plugins
+		parser.registerPlugin(new MetadataExtractorPlugin());
+		if (config.elasticsearchNode) {
+			parser.registerPlugin(
+				new ElasticsearchIndexerPlugin({
+					node: config.elasticsearchNode,
+					index: config.elasticsearchIndex,
+					apiKey: config.elasticsearchApiKey,
+				}),
 			);
-			renderer = null;
+			console.log(
+				`[Fetcher Node] Registered Elasticsearch Indexer Plugin (${config.elasticsearchNode})`,
+			);
 		}
-	}
 
-	// Init Fetcher Agent
-	const fetcher = new FetcherAgent(
-		frontier,
-		storage,
-		parser,
-		eliminator,
-		renderer,
-	);
+		const eliminator = new DuplicateEliminator();
+		console.log("[Fetcher Node] Initialized Parser and Duplicate Eliminator");
 
-	// Start pipeline
-	fetcher.startListening();
-
-	// Start Dashboard UI
-	if (process.env.DISABLE_DASHBOARD !== "true") {
-		startDashboard();
-	}
-
-	console.log("[Orchestrator] System running and waiting for seeds.");
-
-	// Graceful shutdown
-	process.on("SIGINT", async () => {
-		console.log("[Orchestrator] Shutting down...");
-		if (renderer) {
-			await renderer.close();
+		let renderer: RendererAgent | null = null;
+		if (config.useRenderer) {
+			try {
+				const r = new RendererAgent();
+				await r.init();
+				renderer = r;
+				console.log("[Fetcher Node] Initialized Renderer Agent (Puppeteer)");
+			} catch (err) {
+				console.warn(
+					"[Fetcher Node] Failed to initialize Renderer Agent — continuing without JavaScript rendering:",
+					(err as Error).message,
+				);
+				renderer = null;
+			}
 		}
-		await frontier.close();
-		await storage.close();
-		process.exit(0);
-	});
+
+		// Init Fetcher Agent
+		const fetcher = new FetcherAgent(
+			frontier,
+			storage,
+			parser,
+			eliminator,
+			renderer,
+		);
+
+		// Start pipeline
+		fetcher.startListening();
+		console.log(
+			"[Fetcher Node] System running and listening for URLs in the queue.",
+		);
+
+		// Graceful shutdown
+		process.on("SIGINT", async () => {
+			console.log("[Fetcher Node] Shutting down...");
+			if (renderer) {
+				await renderer.close();
+			}
+			await frontier.close();
+			await storage.close();
+			process.exit(0);
+		});
+	} else {
+		// Orchestrator mode (default)
+		console.log(
+			`[Orchestrator] Running in Orchestrator mode. Monitoring queue globally.`,
+		);
+
+		const queue = frontier.getQueue();
+
+		// Listen for global completion events from the queue
+		queue.on("global:completed", (_jobId, resultString) => {
+			try {
+				const result = JSON.parse(resultString);
+				if (result?.success && result.url && result.podName) {
+					console.log(
+						`[Orchestrator] Pod [${result.podName}] successfully fetched: ${result.url}`,
+					);
+				}
+			} catch (_e) {
+				// Ignore non-json results
+			}
+		});
+
+		// Start Dashboard UI
+		if (process.env.DISABLE_DASHBOARD !== "true") {
+			startDashboard();
+		}
+
+		console.log("[Orchestrator] System running and waiting for seeds.");
+
+		// Graceful shutdown
+		process.on("SIGINT", async () => {
+			console.log("[Orchestrator] Shutting down...");
+			await frontier.close();
+			await storage.close();
+			process.exit(0);
+		});
+	}
 }
 
 main().catch(console.error);

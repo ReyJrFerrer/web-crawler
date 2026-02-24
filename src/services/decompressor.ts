@@ -92,8 +92,8 @@ export class DecompressorService {
 	}
 }
 
-// Run CLI if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Don't run CLI if just imported
+if (require.main === module) {
 	const service = new DecompressorService();
 	service.runCli().catch((err) => {
 		console.error("Fatal error:", err);

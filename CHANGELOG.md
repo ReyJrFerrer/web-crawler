@@ -1,5 +1,20 @@
 Feb 24, 2026
 Developer: Opencode
+- Unified CLI and Kubernetes Orchestrator Migration:
+    - Added `ROLE` and `POD_NAME` environment variables to `config.ts` to cleanly separate the Orchestrator from the Fetcher workers.
+    - Updated `src/index.ts` to branch logic based on `ROLE`:
+        - If `ROLE=fetcher`, the process exclusively runs the `FetcherAgent` listening to the queue (designed for Kubernetes pods).
+        - If `ROLE=orchestrator` (default), the process skips job processing and instead listens to Redis `global:completed` events, streaming live logs of which Kubernetes pod fetched which URL.
+    - Modified `src/agents/fetcher.ts` to return an object containing `{ success: true, url, podName }` upon job completion, allowing the orchestrator to identify the worker pod.
+    - Updated Kubernetes deployment manifests (`k8s/local/deployment.yaml` and `k8s/doks/deployment.yaml`) to inject `ROLE=fetcher` and expose the pod name via the Downward API (`metadata.name`).
+    - Created a unified, interactive CLI dashboard (`src/cli/index.ts`) using `prompts` that consolidates cluster management and queue operations:
+        - View active Kubernetes fetcher pods and their statuses.
+        - Dynamically scale fetcher replicas up or down via the Kubernetes API.
+        - Monitor live Redis queue statistics.
+        - Control the queue (Pause, Resume, Empty, Stop).
+        - Decompress and view stored HTML files.
+    - Updated `package.json` scripts, adding a single `bun run cli` command to launch the unified dashboard and removing deprecated individual script files (`src/cli/scale.ts`, `src/monitor.ts`, `src/services/decompressor.ts`).
+
 - Infrastructure & Scaling Setup (Day 3):
     - Added Dockerfile to containerize the fetcher agent using Bun and Puppeteer.
     - Created Kubernetes manifests for local testing (`k8s/local/`) using Docker Desktop, configured to connect to `host.docker.internal` services.
