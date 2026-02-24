@@ -26,16 +26,16 @@ class Simhash64 {
 			const h = this.fnv1a64(token);
 			for (let i = 0; i < 64; i++) {
 				if ((h & (1n << BigInt(i))) !== 0n) {
-					v[i]++;
+					v[i] = (v[i] as number) + 1;
 				} else {
-					v[i]--;
+					v[i] = (v[i] as number) - 1;
 				}
 			}
 		}
 
 		let fingerprint = 0n;
 		for (let i = 0; i < 64; i++) {
-			if (v[i] > 0) {
+			if ((v[i] as number) > 0) {
 				fingerprint |= 1n << BigInt(i);
 			}
 		}

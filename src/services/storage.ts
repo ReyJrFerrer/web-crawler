@@ -65,7 +65,8 @@ export class StorageService {
 
 		if (this.objectStorage) {
 			// Save to S3
-			s3Key = `${crypto.createHash("sha256").update(url).digest("hex")}.html`;
+			const hash = crypto.createHash("sha256").update(url).digest("hex");
+			s3Key = `raw-html/${hash}.html`;
 			storedAlgo = this.algo !== "none" ? this.algo : "brotli";
 			await this.objectStorage.putObject(
 				s3Key,

@@ -25,6 +25,7 @@ export const config = {
 	s3Endpoint: process.env.S3_ENDPOINT || "",
 	s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "",
 	s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+	s3RetentionDays: parseInt(process.env.S3_RETENTION_DAYS || "30", 10),
 
 	// Indexer / Extensibility Layer Config
 	elasticsearchNode: process.env.ELASTICSEARCH_NODE || "",

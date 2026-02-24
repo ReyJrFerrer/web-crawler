@@ -1,0 +1,14 @@
+{
+	"Rules": [
+		{
+			"ID": "DeleteOldRawHTML",
+			"Filter": {
+				"Prefix": "raw-html/"
+			},
+			"Status": "Enabled",
+			"Expiration": {
+				"Days": 30
+			}
+		}
+	]
+}

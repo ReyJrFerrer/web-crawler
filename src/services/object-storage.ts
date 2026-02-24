@@ -48,7 +48,7 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
 	async setupLifecycle(): Promise<void> {
 		try {
 			console.log(
-				`[S3Adapter] Configuring 30-day lifecycle rule for ${this.bucketName}...`,
+				`[S3Adapter] Configuring ${config.s3RetentionDays}-day lifecycle rule for 'raw-html/' prefix in ${this.bucketName}...`,
 			);
 			await this.client.send(
 				new PutBucketLifecycleConfigurationCommand({
@@ -56,11 +56,11 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
 					LifecycleConfiguration: {
 						Rules: [
 							{
-								ID: "DeleteOldHTML",
-								Filter: { Prefix: "" },
+								ID: "DeleteOldRawHTML",
+								Filter: { Prefix: "raw-html/" },
 								Status: "Enabled",
 								Expiration: {
-									Days: 30,
+									Days: config.s3RetentionDays,
 								},
 							},
 						],
@@ -79,7 +79,13 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
 				err.$metadata?.httpStatusCode === 403
 			) {
 				console.warn(
-					`[S3Adapter] WARN: Your DigitalOcean Spaces API key lacks permission to configure bucket lifecycle rules. Please log in to the DigitalOcean Control Panel and manually configure a 30-day file deletion rule for the '${this.bucketName}' space to prevent excessive storage costs.`,
+					`[S3Adapter] WARN: Your DigitalOcean Spaces API key lacks permission to configure bucket lifecycle rules via the S3 API. \n` +
+						`[S3Adapter] ACTION REQUIRED: Please configure the ${config.s3RetentionDays}-day lifecycle rule using the AWS CLI:\n` +
+						`aws s3api put-bucket-lifecycle-configuration \\\n` +
+						`  --endpoint-url ${config.s3Endpoint || "https://nyc3.digitaloceanspaces.com"} \\\n` +
+						`  --bucket ${this.bucketName} \\\n` +
+						`  --lifecycle-configuration file://src/scripts/s3-lifecycle.json\n` +
+						`[S3Adapter] ALTERNATIVE: You can run 'bun run src/scripts/cleanup.ts' via a cron job to manually clean up old files and database records.`,
 				);
 			} else {
 				console.error(
