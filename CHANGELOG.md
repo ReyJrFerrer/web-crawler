@@ -1,11 +1,21 @@
 Feb 23, 2026
 Developer: Reynaldo
+- Integrate DigitalOcean Spaces (S3 Object Storage):
+    - Added `@aws-sdk/client-s3` dependency.
+    - Updated `S3ObjectStorageAdapter` to use the official AWS SDK to connect to DigitalOcean Spaces.
+    - Implemented `setupLifecycle` method in the adapter to dynamically configure a 30-day auto-deletion lifecycle rule on the bucket, satisfying the data retention requirements.
+    - Updated `StorageService` to prioritize saving compressed HTML blobs to DigitalOcean Spaces when configured, storing only the `s3Key` reference in MongoDB.
+    - Modified `getRawHtml` to gracefully fetch and decompress data directly from the S3 bucket using stream parsing, while maintaining fallback support for legacy MongoDB-stored buffers.
+    - Added comprehensive mocks and tests in `tests/storage.test.ts` to validate S3 logic without incurring network overhead.
+    - Configured new environment variables in `config.ts` (`S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`).
+    - Implemented robust error handling for DigitalOcean Spaces AccessDenied (HTTP 403) errors during lifecycle configuration.
+
 - Indexer Integration / Extensibility Layer:
     - Fixed data pipeline bug to ensure `extractedData` from plugins is successfully passed through `FetcherAgent` and persisted to MongoDB via `StorageService`.
     - Refactored `ParserAgent` to support a pluggable architecture with `ParserPlugin` interface.
     - Updated `parse` method to run asynchronously to support promise-based plugins.
     - Created `extract` and `index` lifecycle hooks for plugins to seamlessly process and index data.
-    - Added production-ready plugins in `src/plugins/index.ts`: `MetadataExtractorPlugin` for robust SEO/OG metadata extraction and `ElasticsearchIndexerPlugin` for real-time document indexing to Elasticsearch via API.
+    - Added plugins in `src/plugins/index.ts`: `MetadataExtractorPlugin` for SEO/OG metadata extraction and `ElasticsearchIndexerPlugin` for real-time document indexing to Elasticsearch via API.
     - Updated `FetcherAgent` and test suites to accommodate the new asynchronous parser.
     - Exported and wired configuration environment variables for Elasticsearch (`ELASTICSEARCH_NODE`, `ELASTICSEARCH_INDEX`, `ELASTICSEARCH_API_KEY`) into the crawler orchestration flow.
 

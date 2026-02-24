@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { type Collection, type Db, MongoClient } from "mongodb";
 import { config } from "../config";
 import {
@@ -5,10 +6,15 @@ import {
 	compressData,
 	decompressData,
 } from "../utils/storage-optimizer";
+import {
+	type ObjectStorageAdapter,
+	S3ObjectStorageAdapter,
+} from "./object-storage";
 
 export interface RawHtmlDoc {
 	url: string;
-	html: string | Buffer;
+	html?: string | Buffer; // Optional if stored in S3
+	s3Key?: string; // The object storage key
 	crawledAt: Date;
 	algo?: string; // e.g., 'brotli', 'gzip', 'none'
 }
@@ -28,10 +34,15 @@ export class StorageService {
 	private parsedCollection: Collection<ParsedDataDoc> | null = null;
 
 	private algo: CompressionAlgo;
+	private objectStorage: ObjectStorageAdapter | null = null;
 
 	constructor() {
 		this.client = new MongoClient(config.mongoUrl);
 		this.algo = config.compressionAlgo || "brotli";
+
+		if (config.s3Endpoint || config.s3AccessKeyId) {
+			this.objectStorage = new S3ObjectStorageAdapter();
+		}
 	}
 
 	async connect() {
@@ -40,31 +51,44 @@ export class StorageService {
 		this.rawCollection = this.db.collection("rawHtml");
 		this.parsedCollection = this.db.collection("parsedData");
 
-		// Optional: Create indexes
-		// TO CHECK
-		// await this.rawCollection.createIndex({ url: 1 }, { unique: true });
-		// await this.parsedCollection.createIndex({ url: 1 }, { unique: true });
+		if (this.objectStorage) {
+			await this.objectStorage.setupLifecycle();
+		}
 	}
 
 	async saveRawHtml(url: string, html: string) {
 		if (!this.rawCollection) throw new Error("Database not connected");
 
-		let storedHtml: string | Buffer = html;
+		let storedHtml: string | Buffer | undefined = html;
 		let storedAlgo = "none";
+		let s3Key: string | undefined;
 
-		if (this.algo !== "none") {
-			try {
-				storedHtml = await compressData(html, this.algo);
-				storedAlgo = this.algo;
-			} catch (error) {
-				console.error(`[Storage] Failed to compress HTML for ${url}:`, error);
-				// fallback to raw string on error
+		if (this.objectStorage) {
+			// Save to S3
+			s3Key = `${crypto.createHash("sha256").update(url).digest("hex")}.html`;
+			storedAlgo = this.algo !== "none" ? this.algo : "brotli";
+			await this.objectStorage.putObject(
+				s3Key,
+				html,
+				storedAlgo as CompressionAlgo,
+			);
+			storedHtml = undefined; // Don't save HTML body in MongoDB
+		} else {
+			// Save to Mongo Fallback
+			if (this.algo !== "none") {
+				try {
+					storedHtml = await compressData(html, this.algo);
+					storedAlgo = this.algo;
+				} catch (error) {
+					console.error(`[Storage] Failed to compress HTML for ${url}:`, error);
+				}
 			}
 		}
 
 		return this.rawCollection.insertOne({
 			url,
 			html: storedHtml,
+			s3Key,
 			algo: storedAlgo,
 			crawledAt: new Date(),
 		});
@@ -74,6 +98,25 @@ export class StorageService {
 		if (!this.rawCollection) throw new Error("Database not connected");
 		const doc = await this.rawCollection.findOne({ url });
 		if (!doc) return null;
+
+		// Fetch from S3 if s3Key exists
+		if (doc.s3Key && this.objectStorage) {
+			try {
+				return await this.objectStorage.getObject(
+					doc.s3Key,
+					(doc.algo as CompressionAlgo) || "brotli",
+				);
+			} catch (error) {
+				console.error(
+					`[Storage] Failed to get HTML from S3 for ${url}:`,
+					error,
+				);
+				return null;
+			}
+		}
+
+		// Fallback to Mongo
+		if (!doc.html) return null;
 
 		if (doc.algo && doc.algo !== "none" && doc.html instanceof Buffer) {
 			try {

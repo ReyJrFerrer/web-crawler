@@ -27,6 +27,7 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.995.0",
 		"@types/puppeteer": "^7.0.4",
 		"axios": "^1.13.5",
 		"bloomfilter": "^1.0.0",

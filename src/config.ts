@@ -19,6 +19,13 @@ export const config = {
 		| "none",
 	proxyListUrl: process.env.PROXY_LIST_URL || "",
 
+	// Object Storage Config (DigitalOcean Spaces / S3)
+	s3BucketName: process.env.S3_BUCKET_NAME || "crawler-raw-html",
+	s3Region: process.env.S3_REGION || "nyc3",
+	s3Endpoint: process.env.S3_ENDPOINT || "",
+	s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+	s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+
 	// Indexer / Extensibility Layer Config
 	elasticsearchNode: process.env.ELASTICSEARCH_NODE || "",
 	elasticsearchIndex: process.env.ELASTICSEARCH_INDEX || "crawler-data",
