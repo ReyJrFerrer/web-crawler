@@ -1,5 +1,5 @@
 Feb 24, 2026
-Developer: Opencode
+Developer: Reynaldo Jr. D. Ferrer
 - Unified CLI and Kubernetes Orchestrator Migration:
     - Added `ROLE` and `POD_NAME` environment variables to `config.ts` to cleanly separate the Orchestrator from the Fetcher workers.
     - Updated `src/index.ts` to branch logic based on `ROLE`:
