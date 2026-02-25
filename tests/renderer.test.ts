@@ -33,7 +33,7 @@ describe("Renderer Agent (Puppeteer)", () => {
 
 		renderer = new RendererAgent();
 		await renderer.init();
-	});
+	}, 10000); // 10 seconds timeout for puppeteer launch
 
 	afterAll(async () => {
 		await renderer.close();
