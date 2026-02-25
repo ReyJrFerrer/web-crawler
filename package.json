@@ -5,9 +5,6 @@
 	"private": true,
 	"scripts": {
 		"start": "bun run src/index.ts",
-		"server": "bun run src/frontend/server/index.ts",
-		"dashboard": "bun run --cwd src/frontend/dashboard dev",
-		"dashboard:build": "bun run --cwd src/frontend/dashboard build",
 		"test": "bun test",
 		"cli": "bun run src/cli/index.ts",
 		"seed": "bun run src/seed.ts",

@@ -1,5 +1,5 @@
 Feb 24, 2026
-Developer: Reynaldo Jr. D. Ferrer
+Developer: Reynaldo
 - Unified CLI and Kubernetes Orchestrator Migration:
     - Added `ROLE` and `POD_NAME` environment variables to `config.ts` to cleanly separate the Orchestrator from the Fetcher workers.
     - Updated `src/index.ts` to branch logic based on `ROLE`:
@@ -15,7 +15,7 @@ Developer: Reynaldo Jr. D. Ferrer
         - Decompress and view stored HTML files.
     - Updated `package.json` scripts, adding a single `bun run cli` command to launch the unified dashboard and removing deprecated individual script files (`src/cli/scale.ts`, `src/monitor.ts`, `src/services/decompressor.ts`).
 
-- Infrastructure & Scaling Setup (Day 3):
+- Infrastructure & Scaling Setup:
     - Added Dockerfile to containerize the fetcher agent using Bun and Puppeteer.
     - Created Kubernetes manifests for local testing (`k8s/local/`) using Docker Desktop, configured to connect to `host.docker.internal` services.
     - Built a Node/Bun CLI tool (`src/cli/scale.ts`) utilizing `@kubernetes/client-node` to interact with the Kubernetes API for dynamic horizontal scaling of fetcher replicas.
