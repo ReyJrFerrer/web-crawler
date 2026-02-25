@@ -52,20 +52,20 @@ export class FetcherAgent {
 		depth: number,
 		originalDomain?: string,
 		abortSignal?: AbortSignal,
-	): Promise<boolean> {
+	): Promise<boolean | { aborted: true }> {
 		try {
-			if (abortSignal?.aborted) return true;
+			if (abortSignal?.aborted) return { aborted: true };
 
 			if (await this.frontier.isStopped()) {
 				console.log(`[Fetcher] Queue is stopped. Aborting fetch for ${url}`);
-				return true; // Complete the job so it leaves the active list, do not requeue
+				return { aborted: true }; // Complete the job so it leaves the active list, do not requeue
 			}
 			if (await this.frontier.isPaused()) {
 				console.log(
 					`[Fetcher] Queue is paused. Re-queuing ${url} and aborting active fetch.`,
 				);
 				await this.frontier.addUrl(url, depth, originalDomain);
-				return true; // Complete the current active job since we re-queued it
+				return { aborted: true }; // Complete the current active job since we re-queued it
 			}
 
 			if (depth > config.maxDepth) {
@@ -83,7 +83,7 @@ export class FetcherAgent {
 			// 2. Per-domain rate limiting (Day 3 enhancement)
 			await enforcePerDomainRateLimit(url, config.crawlDelayMs, abortSignal);
 
-			if (abortSignal?.aborted) return true;
+			if (abortSignal?.aborted) return { aborted: true };
 
 			console.log(`[Fetcher] Fetching URL: ${url} (Depth: ${depth})`);
 
@@ -120,7 +120,7 @@ export class FetcherAgent {
 					if (!(await this.frontier.isStopped())) {
 						await this.frontier.addUrl(url, depth, originalDomain);
 					}
-					return true;
+					return { aborted: true };
 				}
 
 				const errorMsg = err instanceof Error ? err.message : String(err);
@@ -208,7 +208,7 @@ export class FetcherAgent {
 						if (!(await this.frontier.isStopped())) {
 							await this.frontier.addUrl(url, depth, originalDomain);
 						}
-						return true;
+						return { aborted: true };
 					}
 					console.error(
 						`[Fetcher] Renderer failed for ${url}, falling back to raw HTML.`,
@@ -269,7 +269,7 @@ export class FetcherAgent {
 				if (!(await this.frontier.isStopped())) {
 					await this.frontier.addUrl(url, depth, originalDomain);
 				}
-				return true;
+				return { aborted: true };
 			}
 
 			const errorMessage =
@@ -360,6 +360,16 @@ export class FetcherAgent {
 					if (!success) {
 						throw new Error(`Failed to process ${url}`);
 					}
+
+					if (typeof success === "object" && success.aborted) {
+						return {
+							success: true,
+							aborted: true,
+							url,
+							podName: config.podName,
+						};
+					}
+
 					return { success: true, url, podName: config.podName };
 				} finally {
 					abortControllers.delete(controller);

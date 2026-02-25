@@ -102,14 +102,58 @@ async function main() {
 
 		const queue = frontier.getQueue();
 
+		// Listen to pub/sub control signals from CLI
+		await frontier.initializeSubscribers();
+		frontier.on("control", (data) => {
+			if (data.action === "pause") {
+				console.log(
+					"\n=======================================================",
+				);
+				console.log("⏸️  [Orchestrator] CRAWLER HAS BEEN PAUSED!");
+				console.log(
+					"=======================================================\n",
+				);
+			} else if (data.action === "resume") {
+				console.log(
+					"\n=======================================================",
+				);
+				console.log("▶️  [Orchestrator] CRAWLER HAS BEEN RESUMED!");
+				console.log(
+					"=======================================================\n",
+				);
+			} else if (data.action === "stop") {
+				console.log(
+					"\n=======================================================",
+				);
+				console.log("🛑 [Orchestrator] CRAWLER HAS BEEN STOPPED!");
+				console.log(
+					"=======================================================\n",
+				);
+			} else if (data.action === "empty") {
+				console.log(
+					"\n=======================================================",
+				);
+				console.log("🗑️  [Orchestrator] CRAWLER QUEUE HAS BEEN EMPTIED!");
+				console.log(
+					"=======================================================\n",
+				);
+			}
+		});
+
 		// Listen for global completion events from the queue
 		queue.on("global:completed", (_jobId, resultString) => {
 			try {
 				const result = JSON.parse(resultString);
 				if (result?.success && result.url && result.podName) {
-					console.log(
-						`[Orchestrator] Pod [${result.podName}] successfully fetched: ${result.url}`,
-					);
+					if (result.aborted) {
+						console.log(
+							`[Orchestrator] 🛑 Pod [${result.podName}] aborted fetch for: ${result.url}`,
+						);
+					} else {
+						console.log(
+							`[Orchestrator] ✅ Pod [${result.podName}] successfully fetched: ${result.url}`,
+						);
+					}
 				}
 			} catch (_e) {
 				// Ignore non-json results
