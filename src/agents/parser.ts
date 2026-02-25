@@ -7,10 +7,20 @@ export interface ParsedResult {
 	links: string[];
 	text: string;
 	extractedData?: Record<string, unknown>;
+	contentType?: string;
 }
 
 export interface ParserPlugin {
 	name: string;
+	// Main entry point for overriding the entire parse process
+	parse?(
+		baseUrl: string,
+		content: string | Buffer,
+		originalDomain?: string,
+		contentType?: string,
+	): Promise<ParsedResult | undefined> | undefined;
+
+	// Legacy hook for extending HTML parsing
 	extract?(
 		url: string,
 		html: string,
@@ -31,9 +41,50 @@ export class ParserAgent {
 
 	async parse(
 		baseUrl: string,
-		html: string,
+		content: string | Buffer,
 		originalDomain?: string,
+		contentType?: string,
 	): Promise<ParsedResult> {
+		// 1. Give plugins a chance to handle the parsing completely (e.g. for non-HTML)
+		for (const plugin of this.plugins) {
+			if (plugin.parse) {
+				try {
+					const result = await plugin.parse(
+						baseUrl,
+						content,
+						originalDomain,
+						contentType,
+					);
+					if (result) {
+						// Run indexers
+						for (const indexPlugin of this.plugins) {
+							if (indexPlugin.index) {
+								try {
+									await indexPlugin.index(result);
+								} catch (err) {
+									console.error(
+										`[ParserAgent] Plugin ${indexPlugin.name} index error:`,
+										err,
+									);
+								}
+							}
+						}
+						return result;
+					}
+				} catch (err) {
+					console.error(
+						`[ParserAgent] Plugin ${plugin.name} parse error:`,
+						err,
+					);
+				}
+			}
+		}
+
+		// Ensure content is string for HTML parsing
+		const html =
+			typeof content === "string" ? content : content.toString("utf-8");
+
+		// 2. Fallback to default HTML parsing if no plugin handled it
 		const $ = cheerio.load(html);
 		const title = $("title").text().trim() || "";
 
@@ -64,7 +115,14 @@ export class ParserAgent {
 			baseHostname = new URL(baseUrl).hostname;
 		} catch (_e) {
 			// invalid base url
-			return { url: baseUrl, title, links: [], text: "", extractedData };
+			return {
+				url: baseUrl,
+				title,
+				links: [],
+				text: "",
+				extractedData,
+				contentType,
+			};
 		}
 		const effectiveOriginalDomain = originalDomain || baseHostname;
 		const isExternalPage = baseHostname !== effectiveOriginalDomain;
@@ -114,6 +172,7 @@ export class ParserAgent {
 			links: Array.from(links),
 			text,
 			extractedData,
+			contentType,
 		};
 
 		// Run indexers

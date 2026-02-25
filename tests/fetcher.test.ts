@@ -11,23 +11,27 @@ mock.module("axios", () => {
 					return {
 						data: '<html><head></head><body><div id="root"></div><script>load()</script></body></html>',
 						status: 200,
+						headers: { "content-type": "text/html" },
 					};
 				}
 				if (url === "http://forbidden.com") {
 					return {
 						status: 403,
 						data: "Forbidden",
+						headers: {},
 					};
 				}
 				if (url === "http://too-many-requests.com") {
 					return {
 						status: 429,
 						data: "Too Many Requests",
+						headers: {},
 					};
 				}
 				return {
 					data: "<html><body><a href='/1'>link 1</a><a href='http://other.com'>link 2</a></body></html>",
 					status: 200,
+					headers: { "content-type": "text/html" },
 				};
 			},
 		},

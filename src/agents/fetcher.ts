@@ -87,7 +87,7 @@ export class FetcherAgent {
 
 			console.log(`[Fetcher] Fetching URL: ${url} (Depth: ${depth})`);
 
-			// 3. Download HTML (using cacheable-lookup DNS Cache and optional proxy)
+			// 3. Download Data
 			const proxyConfig = await proxyManager.getProxy();
 			const axiosConfig: AxiosRequestConfig = {
 				headers: { "User-Agent": config.userAgent },
@@ -96,6 +96,7 @@ export class FetcherAgent {
 				httpsAgent,
 				validateStatus: () => true, // Don't throw on non-200 status codes so we can handle them
 				signal: abortSignal, // Abort the request if signal is aborted
+				responseType: "arraybuffer", // Crucial: get raw bytes to handle non-UTF8 or binary data correctly
 			};
 
 			if (proxyConfig) {
@@ -107,7 +108,7 @@ export class FetcherAgent {
 			}
 
 			const startTime = Date.now();
-			let response: AxiosResponse;
+			let response: AxiosResponse | undefined;
 			try {
 				response = await axios.get(url, axiosConfig);
 			} catch (err: unknown) {
@@ -136,6 +137,11 @@ export class FetcherAgent {
 					500,
 					Date.now() - startTime,
 				);
+				return false;
+			}
+
+			if (!response) {
+				console.error(`[Fetcher] No response received for ${url}`);
 				return false;
 			}
 
@@ -175,45 +181,74 @@ export class FetcherAgent {
 				proxyManager.reportSuccess(proxyConfig);
 			}
 
-			let html =
-				typeof response.data === "string"
-					? response.data
-					: JSON.stringify(response.data);
+			let contentTypeRaw = "";
+			if (response) {
+				const headersObj = response.headers as Record<string, string>;
+				contentTypeRaw =
+					headersObj["content-type"] || headersObj["Content-Type"] || "";
+			}
+			const contentType = ((contentTypeRaw || "").split(";")[0] || "")
+				.trim()
+				.toLowerCase();
 
-			// Parse HTML
-			let parsed = await this.parser.parse(url, html, originalDomain);
+			let content: string | Buffer;
+			const rawData = response ? response.data : "";
+			if (Buffer.isBuffer(rawData)) {
+				content = rawData;
+			} else if (rawData instanceof ArrayBuffer) {
+				content = Buffer.from(rawData);
+			} else if (typeof rawData === "string") {
+				content = rawData;
+			} else {
+				content = JSON.stringify(rawData || "");
+			}
+
+			// Parse Data (HTML or otherwise)
+			let parsed = await this.parser.parse(
+				url,
+				content,
+				originalDomain,
+				contentType,
+			);
 			let { title, links, text } = parsed;
 
-			// Detect SPA
-			if (this.isSuspectedSPA(html, links.length)) {
-				console.log(
-					`[Fetcher] Suspected SPA detected for ${url}. Handing over to Renderer Agent.`,
-				);
-				try {
-					const renderedHtml = await this.renderer?.render(url, abortSignal);
-					if (renderedHtml) {
-						html = renderedHtml;
-						// Re-parse with the rendered HTML
-						parsed = await this.parser.parse(url, html, originalDomain);
-						title = parsed.title;
-						links = parsed.links;
-						text = parsed.text;
-					}
-				} catch (renderError) {
-					if (
-						renderError instanceof Error &&
-						renderError.message === "Aborted"
-					) {
-						console.log(`[Fetcher] Renderer aborted for ${url}`);
-						if (!(await this.frontier.isStopped())) {
-							await this.frontier.addUrl(url, depth, originalDomain);
-						}
-						return { aborted: true };
-					}
-					console.error(
-						`[Fetcher] Renderer failed for ${url}, falling back to raw HTML.`,
-						renderError,
+			// Detect SPA (Only makes sense for HTML)
+			if (contentType.includes("html") && typeof content === "string") {
+				if (this.isSuspectedSPA(content, links.length)) {
+					console.log(
+						`[Fetcher] Suspected SPA detected for ${url}. Handing over to Renderer Agent.`,
 					);
+					try {
+						const renderedHtml = await this.renderer?.render(url, abortSignal);
+						if (renderedHtml) {
+							content = renderedHtml;
+							// Re-parse with the rendered HTML
+							parsed = await this.parser.parse(
+								url,
+								content,
+								originalDomain,
+								contentType,
+							);
+							title = parsed.title;
+							links = parsed.links;
+							text = parsed.text;
+						}
+					} catch (renderError) {
+						if (
+							renderError instanceof Error &&
+							renderError.message === "Aborted"
+						) {
+							console.log(`[Fetcher] Renderer aborted for ${url}`);
+							if (!(await this.frontier.isStopped())) {
+								await this.frontier.addUrl(url, depth, originalDomain);
+							}
+							return { aborted: true };
+						}
+						console.error(
+							`[Fetcher] Renderer failed for ${url}, falling back to raw HTML.`,
+							renderError,
+						);
+					}
 				}
 			}
 
@@ -225,10 +260,14 @@ export class FetcherAgent {
 				return true;
 			}
 
-			// Save raw HTML
-			await this.storage.saveRawHtml(url, html);
+			// Save raw Data
+			const stringContent = Buffer.isBuffer(content)
+				? content.toString("utf-8")
+				: (content as string);
+
+			await this.storage.saveRawHtml(url, stringContent);
 			console.log(
-				`[Fetcher] Stored raw HTML for ${url} (Optimized with ${config.compressionAlgo || "brotli"})`,
+				`[Fetcher] Stored raw data for ${url} (Optimized with ${config.compressionAlgo || "brotli"})`,
 			);
 
 			// Save parsed metadata

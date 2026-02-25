@@ -7,6 +7,7 @@ import {
 	ElasticsearchIndexerPlugin,
 	MetadataExtractorPlugin,
 } from "./plugins/index";
+import { NonHtmlParserPlugin } from "./plugins/non-html-parser";
 import { Frontier } from "./services/frontier";
 import { StorageService } from "./services/storage";
 
@@ -37,6 +38,7 @@ async function main() {
 
 		// Register production-ready plugins
 		parser.registerPlugin(new MetadataExtractorPlugin());
+		parser.registerPlugin(new NonHtmlParserPlugin());
 		if (config.elasticsearchNode) {
 			parser.registerPlugin(
 				new ElasticsearchIndexerPlugin({

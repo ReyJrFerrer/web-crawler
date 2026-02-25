@@ -1,6 +1,9 @@
-### Phase 2: Day 2 - Optimization, Fault Tolerance & Politeness
-* **Queue Control & Interruption:** Implemented real-time cancellation of active fetcher jobs using Redis Pub/Sub (`crawler:control`). Integrated `AbortController` in the rate limiter, fetcher HTTP requests, and renderer agent so that the `pause`, `stop`, and `empty` CLI commands instantly halt in-flight tasks instead of waiting for them to complete.
-* **Rate Limiter Bugfix:** Fixed a concurrency bug in `enforcePerDomainRateLimit` where concurrent requests calculated the same dynamic delay and clustered together, which incorrectly triggered `429 Too Many Requests` responses.
+Feb 25, 2026
+Developer: Reynaldo
+- **Queue Control & Interruption:** Implemented real-time cancellation of active fetcher jobs using Redis Pub/Sub (`crawler:control`). Integrated `AbortController` in the rate limiter, fetcher HTTP requests, and renderer agent so that the `pause`, `stop`, and `empty` CLI commands instantly halt in-flight tasks instead of waiting for them to complete.
+- **Rate Limiter Bugfix:** Fixed a concurrency bug in `enforcePerDomainRateLimit` where concurrent requests calculated the same dynamic delay and clustered together, which incorrectly triggered `429 Too Many Requests` responses.
+- **Non-HTML Parsing Plugin:** Added a new parser plugin `NonHtmlParserPlugin` to cleanly process and extract URLs from `application/json`, `text/plain`, and `application/xml` (Sitemaps). This prevents Cheerio from mangling binary/structured data.
+- **TypeScript & Parser Signature Fixes:** Resolved persistent TS2532 (`Object is possibly 'undefined'`) errors in `FetcherAgent` and aligned argument order signatures between `ParserAgent` and `ParserPlugin`.
 
 Feb 24, 2026
 Developer: Reynaldo
