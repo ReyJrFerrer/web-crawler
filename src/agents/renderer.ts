@@ -22,7 +22,7 @@ export class RendererAgent {
 		}
 	}
 
-	async render(url: string): Promise<string> {
+	async render(url: string, abortSignal?: AbortSignal): Promise<string> {
 		if (!this.browser) {
 			await this.init();
 		}
@@ -37,6 +37,10 @@ export class RendererAgent {
 		}
 
 		let page: Page | null = null;
+
+		if (abortSignal?.aborted) {
+			throw new Error("Aborted");
+		}
 
 		try {
 			if (!this.browser) {
@@ -56,9 +60,29 @@ export class RendererAgent {
 				}
 			});
 
+			const onAbort = () => {
+				if (page) {
+					console.log(`[Renderer] Aborting SPA render for ${url}`);
+					page.close().catch(() => {});
+				}
+			};
+
+			abortSignal?.addEventListener("abort", onAbort);
+
 			console.log(`[Renderer] Rendering SPA for ${url}`);
 			// 30 seconds timeout, waiting for network idle
-			await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+			const responsePromise = page.goto(url, {
+				waitUntil: "networkidle2",
+				timeout: 30000,
+			});
+
+			// We cannot natively abort page.goto in puppeteer with an AbortSignal,
+			// but we can expose the page object so the caller could try to close it,
+			// or we can just wait for it.
+			await responsePromise;
+
+			abortSignal?.removeEventListener("abort", onAbort);
+			if (abortSignal?.aborted) throw new Error("Aborted");
 
 			const html = await page.content();
 			return html;

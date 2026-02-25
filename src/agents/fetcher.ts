@@ -51,8 +51,11 @@ export class FetcherAgent {
 		url: string,
 		depth: number,
 		originalDomain?: string,
+		abortSignal?: AbortSignal,
 	): Promise<boolean> {
 		try {
+			if (abortSignal?.aborted) return true;
+
 			if (await this.frontier.isStopped()) {
 				console.log(`[Fetcher] Queue is stopped. Aborting fetch for ${url}`);
 				return true; // Complete the job so it leaves the active list, do not requeue
@@ -78,7 +81,10 @@ export class FetcherAgent {
 			}
 
 			// 2. Per-domain rate limiting (Day 3 enhancement)
-			await enforcePerDomainRateLimit(url, config.crawlDelayMs);
+			await enforcePerDomainRateLimit(url, config.crawlDelayMs, abortSignal);
+
+			if (abortSignal?.aborted) return true;
+
 			console.log(`[Fetcher] Fetching URL: ${url} (Depth: ${depth})`);
 
 			// 3. Download HTML (using cacheable-lookup DNS Cache and optional proxy)
@@ -89,6 +95,7 @@ export class FetcherAgent {
 				httpAgent,
 				httpsAgent,
 				validateStatus: () => true, // Don't throw on non-200 status codes so we can handle them
+				signal: abortSignal, // Abort the request if signal is aborted
 			};
 
 			if (proxyConfig) {
@@ -104,6 +111,18 @@ export class FetcherAgent {
 			try {
 				response = await axios.get(url, axiosConfig);
 			} catch (err: unknown) {
+				if (
+					axios.isCancel(err) ||
+					(err instanceof Error && err.name === "AbortError")
+				) {
+					console.log(`[Fetcher] Request aborted for ${url}`);
+					// Requeue it since it was aborted, or just discard if stopped
+					if (!(await this.frontier.isStopped())) {
+						await this.frontier.addUrl(url, depth, originalDomain);
+					}
+					return true;
+				}
+
 				const errorMsg = err instanceof Error ? err.message : String(err);
 				// Network error (timeout, connection refused, etc.)
 				console.error(`[Fetcher] Network error fetching ${url}:`, errorMsg);
@@ -171,7 +190,7 @@ export class FetcherAgent {
 					`[Fetcher] Suspected SPA detected for ${url}. Handing over to Renderer Agent.`,
 				);
 				try {
-					const renderedHtml = await this.renderer?.render(url);
+					const renderedHtml = await this.renderer?.render(url, abortSignal);
 					if (renderedHtml) {
 						html = renderedHtml;
 						// Re-parse with the rendered HTML
@@ -181,6 +200,16 @@ export class FetcherAgent {
 						text = parsed.text;
 					}
 				} catch (renderError) {
+					if (
+						renderError instanceof Error &&
+						renderError.message === "Aborted"
+					) {
+						console.log(`[Fetcher] Renderer aborted for ${url}`);
+						if (!(await this.frontier.isStopped())) {
+							await this.frontier.addUrl(url, depth, originalDomain);
+						}
+						return true;
+					}
 					console.error(
 						`[Fetcher] Renderer failed for ${url}, falling back to raw HTML.`,
 						renderError,
@@ -234,6 +263,15 @@ export class FetcherAgent {
 
 			return true;
 		} catch (error: unknown) {
+			if (error instanceof Error && error.name === "AbortError") {
+				console.log(`[Fetcher] Aborted fetch for ${url}`);
+				// Don't log this as a failure, it was gracefully aborted
+				if (!(await this.frontier.isStopped())) {
+					await this.frontier.addUrl(url, depth, originalDomain);
+				}
+				return true;
+			}
+
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
 			console.error(`[Fetcher] Error fetching ${url}:`, errorMessage);
@@ -243,6 +281,27 @@ export class FetcherAgent {
 
 	startListening() {
 		const queue = this.frontier.getQueue();
+		const abortControllers = new Set<AbortController>();
+
+		this.frontier.initializeSubscribers().then(() => {
+			this.frontier.on("control", (data: { action: string }) => {
+				console.log(`[Fetcher] Received control action: ${data.action}`);
+				if (
+					data.action === "pause" ||
+					data.action === "stop" ||
+					data.action === "empty"
+				) {
+					// Abort all in-flight jobs
+					console.log(
+						`[Fetcher] Aborting ${abortControllers.size} in-flight jobs due to ${data.action}`,
+					);
+					for (const controller of abortControllers) {
+						controller.abort();
+					}
+					abortControllers.clear();
+				}
+			});
+		});
 
 		queue.on("paused", () => {
 			console.log("[Fetcher] Queue has been paused. Workers are suspended.");
@@ -288,11 +347,23 @@ export class FetcherAgent {
 			const jobName = `partition-${partitionId}`;
 			queue.process(jobName, config.fetcherConcurrency, async (job) => {
 				const { url, depth, originalDomain } = job.data;
-				const success = await this.fetchAndProcess(url, depth, originalDomain);
-				if (!success) {
-					throw new Error(`Failed to process ${url}`);
+				const controller = new AbortController();
+				abortControllers.add(controller);
+
+				try {
+					const success = await this.fetchAndProcess(
+						url,
+						depth,
+						originalDomain,
+						controller.signal,
+					);
+					if (!success) {
+						throw new Error(`Failed to process ${url}`);
+					}
+					return { success: true, url, podName: config.podName };
+				} finally {
+					abortControllers.delete(controller);
 				}
-				return { success: true, url, podName: config.podName };
 			});
 		}
 

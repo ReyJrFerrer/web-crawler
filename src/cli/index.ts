@@ -154,7 +154,9 @@ async function controlPanel(frontier: Frontier) {
 		switch (response.action) {
 			case "pause":
 				await frontier.pause(false);
-				console.log("✅ Queue paused. Fetchers will stop pulling new URLs.\n");
+				console.log(
+					"✅ Queue paused. Pause signal sent to fetchers to abort active jobs.\n",
+				);
 				break;
 			case "resume":
 				await frontier.resume(false);
@@ -162,11 +164,15 @@ async function controlPanel(frontier: Frontier) {
 				break;
 			case "empty":
 				await frontier.empty();
-				console.log("✅ Queue emptied.\n");
+				console.log(
+					"✅ Queue emptied. Empty signal sent to all fetchers to abort active jobs.\n",
+				);
 				break;
 			case "stop":
 				await frontier.stop();
-				console.log("✅ Crawl fully stopped and queue cleared.\n");
+				console.log(
+					"✅ Crawl fully stopped and queue cleared. Stop signal sent to all fetchers.\n",
+				);
 				break;
 			case "back":
 			case undefined:

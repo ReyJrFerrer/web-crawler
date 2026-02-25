@@ -3,7 +3,6 @@ import { FetcherAgent } from "./agents/fetcher";
 import { ParserAgent } from "./agents/parser";
 import { RendererAgent } from "./agents/renderer";
 import { config } from "./config";
-import { startDashboard } from "./frontend/server/index";
 import {
 	ElasticsearchIndexerPlugin,
 	MetadataExtractorPlugin,
@@ -116,11 +115,6 @@ async function main() {
 				// Ignore non-json results
 			}
 		});
-
-		// Start Dashboard UI
-		if (process.env.DISABLE_DASHBOARD !== "true") {
-			startDashboard();
-		}
 
 		console.log("[Orchestrator] System running and waiting for seeds.");
 

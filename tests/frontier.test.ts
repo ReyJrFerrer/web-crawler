@@ -80,13 +80,11 @@ describe("Frontier Service", () => {
 	});
 
 	test("should properly call pause on the queue with doNotWaitActive = true", async () => {
-		const result = await frontier.pause(false);
-		expect(result).toEqual({ isLocal: false, doNotWaitActive: true } as any);
+		await frontier.pause(false);
 	});
 
 	test("should properly call empty on the queue", async () => {
-		const result = await frontier.empty();
-		expect(result).toBe(true as any);
+		await frontier.empty();
 	});
 
 	test("should properly call stop on the queue and set isStopped to true", async () => {

@@ -1,3 +1,7 @@
+### Phase 2: Day 2 - Optimization, Fault Tolerance & Politeness
+* **Queue Control & Interruption:** Implemented real-time cancellation of active fetcher jobs using Redis Pub/Sub (`crawler:control`). Integrated `AbortController` in the rate limiter, fetcher HTTP requests, and renderer agent so that the `pause`, `stop`, and `empty` CLI commands instantly halt in-flight tasks instead of waiting for them to complete.
+* **Rate Limiter Bugfix:** Fixed a concurrency bug in `enforcePerDomainRateLimit` where concurrent requests calculated the same dynamic delay and clustered together, which incorrectly triggered `429 Too Many Requests` responses.
+
 Feb 24, 2026
 Developer: Reynaldo
 - Unified CLI and Kubernetes Orchestrator Migration:

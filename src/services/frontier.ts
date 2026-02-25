@@ -1,4 +1,6 @@
+import { EventEmitter } from "node:events";
 import Queue from "bull";
+import { Redis } from "ioredis";
 import { config } from "../config";
 
 export interface CrawlJobData {
@@ -7,16 +9,37 @@ export interface CrawlJobData {
 	originalDomain?: string;
 }
 
-export class Frontier {
+export class Frontier extends EventEmitter {
 	private queue: Queue.Queue;
+	private subClient: Redis | null = null;
+	private pubClient: Redis | null = null;
+	private isSubscribed = false;
 
 	constructor(queueName = "crawler-frontier") {
+		super();
 		this.queue = new Queue(queueName, config.redisUrl, {
 			settings: {
 				lockDuration: 120000, // 2 minutes (prevents SPA rendering timeouts from stalling jobs)
 				maxStalledCount: 2,
 			},
 		});
+	}
+
+	async initializeSubscribers() {
+		if (this.isSubscribed) return;
+		this.isSubscribed = true;
+
+		this.subClient = new Redis(config.redisUrl);
+		this.pubClient = new Redis(config.redisUrl);
+
+		this.subClient.on("message", (channel, message) => {
+			if (channel === "crawler:control") {
+				const data = JSON.parse(message);
+				this.emit("control", data);
+			}
+		});
+
+		await this.subClient.subscribe("crawler:control");
 	}
 
 	private hashDomain(domain: string): number {
@@ -69,21 +92,36 @@ export class Frontier {
 
 	async pause(isLocal = false) {
 		console.log(`[Frontier] Pausing queue (local: ${isLocal})...`);
-		return this.queue.pause(isLocal, true);
+		await this.queue.pause(isLocal, true);
+		if (!this.pubClient) this.pubClient = new Redis(config.redisUrl);
+		await this.pubClient.publish(
+			"crawler:control",
+			JSON.stringify({ action: "pause" }),
+		);
 	}
 
 	async resume(isLocal = false) {
 		console.log(`[Frontier] Resuming queue (local: ${isLocal})...`);
 		// Use the underlying Redis client to clear the stopped flag
 		await this.queue.client.del("crawler:stopped");
-		return this.queue.resume(isLocal);
+		await this.queue.resume(isLocal);
+		if (!this.pubClient) this.pubClient = new Redis(config.redisUrl);
+		await this.pubClient.publish(
+			"crawler:control",
+			JSON.stringify({ action: "resume" }),
+		);
 	}
 
 	async empty() {
 		console.log(
 			"[Frontier] Emptying queue (removing waiting/delayed/paused jobs)...",
 		);
-		return this.queue.empty();
+		await this.queue.empty();
+		if (!this.pubClient) this.pubClient = new Redis(config.redisUrl);
+		await this.pubClient.publish(
+			"crawler:control",
+			JSON.stringify({ action: "empty" }),
+		);
 	}
 
 	async isPaused(isLocal = false) {
@@ -101,9 +139,20 @@ export class Frontier {
 		await this.queue.client.set("crawler:stopped", "true");
 		await this.pause(false);
 		await this.empty();
+		if (!this.pubClient) this.pubClient = new Redis(config.redisUrl);
+		await this.pubClient.publish(
+			"crawler:control",
+			JSON.stringify({ action: "stop" }),
+		);
 	}
 
 	async close() {
+		if (this.subClient) {
+			this.subClient.disconnect();
+		}
+		if (this.pubClient) {
+			this.pubClient.disconnect();
+		}
 		await this.queue.close();
 	}
 }

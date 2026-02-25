@@ -4,29 +4,59 @@ const domainLastFetch = new Map<string, number>();
 // Tracks the dynamic delay for a specific domain origin
 const domainDynamicDelay = new Map<string, number>();
 
+export class AbortError extends Error {
+	constructor(message = "Aborted") {
+		super(message);
+		this.name = "AbortError";
+	}
+}
+
 /**
  * Ensures that requests to the same domain are separated by a dynamic delay.
  */
 export async function enforcePerDomainRateLimit(
 	url: string,
 	baseDelayMs: number,
+	abortSignal?: AbortSignal,
 ): Promise<void> {
 	try {
 		const origin = new URL(url).origin;
 		const now = Date.now();
 		const lastFetch = domainLastFetch.get(origin) || 0;
 		const currentDelay = domainDynamicDelay.get(origin) || baseDelayMs;
-		const timeSinceLastFetch = now - lastFetch;
 
-		if (timeSinceLastFetch < currentDelay) {
-			const waitTime = currentDelay - timeSinceLastFetch;
+		// Calculate the exact time this request should execute
+		const targetFetchTime = Math.max(now, lastFetch + currentDelay);
+
+		// Update the last fetch time immediately so concurrent requests queue up sequentially
+		domainLastFetch.set(origin, targetFetchTime);
+
+		const waitTime = targetFetchTime - now;
+
+		if (waitTime > 0) {
 			// console.log(`[Rate Limiter] Waiting ${waitTime}ms for ${origin}`);
-			await new Promise((resolve) => setTimeout(resolve, waitTime));
-		}
+			await new Promise<void>((resolve, reject) => {
+				if (abortSignal?.aborted) {
+					return reject(new AbortError());
+				}
 
-		// Update the last fetch time to "now + waitTime" (effectively when it's done waiting)
-		domainLastFetch.set(origin, Date.now());
-	} catch (_error) {
+				const timeoutId = setTimeout(() => {
+					abortSignal?.removeEventListener("abort", onAbort);
+					resolve();
+				}, waitTime);
+
+				const onAbort = () => {
+					clearTimeout(timeoutId);
+					reject(new AbortError());
+				};
+
+				abortSignal?.addEventListener("abort", onAbort);
+			});
+		}
+	} catch (error) {
+		if (error instanceof AbortError) {
+			throw error;
+		}
 		// Just proceed if URL is invalid, letting fetcher fail
 	}
 }
